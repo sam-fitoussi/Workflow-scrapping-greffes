@@ -24,7 +24,11 @@ Airtable + PhantomBuster.
 2. **Tirage Pappers** : utiliser `robot/pappers.py` (fonctions
    `tirage_du_jour` puis `filtrer`) avec la clé en variable d'environnement.
    Budget attendu : ~8-12 jetons par jour. Si `jetons_restants()` < 15,
-   s'arrêter et le signaler dans le rapport.
+   s'arrêter et le signaler dans le rapport (la journée manquée sera
+   rattrapée par le balayage du dimanche une fois le solde rechargé).
+   Si le solde est < 50, exécuter le run normalement mais mettre une
+   ALERTE bien visible en tête du rapport : « ⚠️ Jetons Pappers bas :
+   X restants (~N jours d'autonomie), recharger le pay-as-you-go ».
 
 3. **Anti-doublons** : lister les SIREN déjà présents dans la table
    Entreprises (MCP Airtable) et écarter les sociétés déjà connues.
@@ -40,8 +44,10 @@ Airtable + PhantomBuster.
    statuts « Trouvé / Ambigu / Non trouvé ». Pas de relance des non-trouvés
    (sauf échec technique : une seule relance le lendemain).
 
-6. **Scraping** : pour chaque profil Trouvé/Ambigu, lancer le Profile
-   Scraper PhantomBuster un profil à la fois via `bonusArgument`
+6. **Scraping** : d'abord reprendre les fondateurs des runs précédents en
+   statut « Trouvé » ou « Ambigu » avec une URL mais SANS score (reliquat
+   d'un jour où le plafond a mordu), puis les profils du jour. Lancer le
+   Profile Scraper PhantomBuster un profil à la fois via `bonusArgument`
    `{"spreadsheetUrl": "<url du profil>", "pushResultToCRM": false,
    "numberOfAddsPerLaunch": 1}`, attendre `status=finished` (exitCode 87 =
    succès), récupérer le resultObject. Plafond strict : 80 profils par jour.
