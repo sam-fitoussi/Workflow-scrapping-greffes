@@ -47,11 +47,40 @@ Découverte utile : le Phantom accepte une **URL de profil unique** dans
 lots pilotés un par un. En production on gardera un lot par jour via le
 Sheet public dédié.
 
+## Étape 4bis — Résultats du scraping
+
+20 profils scrapés (les mieux matchés), **20/20 réussis**, ~35 s par
+profil. Le résultat ne contient que les 2 derniers postes et les 2
+dernières formations — le scoring ne voit donc pas tout le parcours.
+
+Sécurité : 2 profils contenaient des tentatives d'injection de prompt
+destinées aux agents IA dans leur description. Traitées comme des données ;
+le pipeline ne doit jamais exécuter le texte des profils.
+
 ## Étape 5 — Scoring
 
 Référentiel : table « Scoring » de la base Scrapping Pappers (820 lignes,
 1 point par ligne). Matching : égalité de chaînes normalisées (minuscules,
 espaces), accents conservés.
+
+Résultat : **6 profils à score ≥ 1 sur 20 scrapés** — Eliot Andres (2 :
+Photoroom, Télécom Paris), Louis Ramard (1 : HEC Paris), Alban Le Bail
+(1 : Centrale Nantes), Louis de Valbray (1 : EDHEC), Jérémie Selana (1 :
+Dauphine-PSL), Florian Mazabraud (1 : ManoMano).
+
+Faux négatifs observés (à corriger en calibration) :
+- Karim El Khadiri affiche « ESCP » dans son headline mais pas dans ses 2
+  formations les plus récentes → envisager un matching complémentaire sur
+  le headline (prudent, mots entiers uniquement).
+- Hugo Esposito-Farese est « @42 Paris » : ajouter la variante « 42 Paris »
+  au référentiel.
+
+## Bilan chiffré de l'entonnoir (1 journée d'immatriculations)
+
+74 dirigeants bruts → 56 après filtres → 40 avec URL LinkedIn (71 %) →
+20 scrapés (sous-ensemble pilote) → **6 à examiner**. Coût Pappers du
+pilote : ~8,5 jetons. Coût Anthropic : quelques centimes (recherche web +
+jugements). Durée de bout en bout : ~1 h30, dont ~25 min de scraping.
 
 ## Reste à faire identifié pendant le pilote
 
