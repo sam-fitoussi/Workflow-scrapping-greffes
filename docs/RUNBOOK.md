@@ -11,15 +11,30 @@ Airtable + PhantomBuster.
   - Table Entreprises : `tblxNwg1hpC3xbVgA`
   - Table Fondateurs : `tblBngzHytB48MiDK`
   - Table Scoring : `tblHdqhFxJsxSLFeR`
+  - Table Journal des runs : `tblbGtPsnQziEQBKu`
 - PhantomBuster : Profile Scraper `4668942683298432`, URL Finder `6409925669476364`
 - La clé API Pappers est fournie dans le prompt de la Routine (variable
   d'environnement `PAPPERS_API_KEY` à exporter avant de lancer les scripts).
 
 ## Étapes du run quotidien
 
-1. **Date cible** : J-2 en jours calendaires (ex. le 26/08 on traite le 24/08),
-   au format JJ-MM-AAAA. Le dimanche, faire EN PLUS le rattrapage : re-tirer
-   chacune des 7 dernières dates (les doublons seront écartés à l'étape 3).
+1. **Dates cibles — détection des journées publiées et non traitées.**
+   Pappers indexe les immatriculations avec ~2 jours ouvrés de retard
+   (constaté le 24/08/2026 : J-1 à J-3 renvoyaient 0), donc ne JAMAIS
+   viser une date fixe. À la place :
+   a. Sonder chaque date de J-1 à J-7 avec un tirage cercle cœur à
+      `par_page=1` (0,1 jeton par sondage) pour lire le champ `total`.
+   b. Lire la table Airtable « Journal des runs » (`tblbGtPsnQziEQBKu`).
+   c. Les dates cibles du jour = toutes les dates avec `total > 0` qui
+      n'ont PAS de ligne dans le Journal. S'il n'y en a aucune, terminer
+      proprement avec un rapport « rien de nouveau publié par Pappers ».
+   d. Après avoir traité une date (toutes les étapes ci-dessous), écrire
+      sa ligne dans le Journal (date, volumes, jetons, notes) — c'est ce
+      qui garantit qu'on ne paie jamais deux fois la même journée.
+   Le dimanche, faire EN PLUS le rattrapage des retardataires : re-tirer
+   les dates du Journal des 7 derniers jours dont le `total` sondé dépasse
+   d'au moins 10 % les « Dirigeants bruts » enregistrés (les doublons
+   seront écartés à l'étape 3) et mettre à jour la ligne du Journal.
 
 2. **Tirage Pappers** : utiliser `robot/pappers.py` (fonctions
    `tirage_du_jour` puis `filtrer`) avec la clé en variable d'environnement.
@@ -31,7 +46,9 @@ Airtable + PhantomBuster.
    X restants (~N jours d'autonomie), recharger le pay-as-you-go ».
 
 3. **Anti-doublons** : lister les SIREN déjà présents dans la table
-   Entreprises (MCP Airtable) et écarter les sociétés déjà connues.
+   Entreprises (MCP Airtable) et écarter les sociétés déjà connues. Le
+   Journal des runs protège au niveau des dates ; ce filtre protège au
+   niveau des sociétés (rattrapages, dates retraitées).
 
 4. **Insertion Airtable** : créer les Entreprises nouvelles puis les
    Fondateurs (liés par record id, statut LinkedIn « À chercher »), comme les
