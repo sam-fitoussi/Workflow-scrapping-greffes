@@ -31,10 +31,15 @@ Airtable + PhantomBuster.
    d. Après avoir traité une date (toutes les étapes ci-dessous), écrire
       sa ligne dans le Journal (date, volumes, jetons, notes) — c'est ce
       qui garantit qu'on ne paie jamais deux fois la même journée.
-   Le dimanche, faire EN PLUS le rattrapage des retardataires : re-tirer
-   les dates du Journal des 7 derniers jours dont le `total` sondé dépasse
-   d'au moins 10 % les « Dirigeants bruts » enregistrés (les doublons
-   seront écartés à l'étape 3) et mettre à jour la ligne du Journal.
+   Le dimanche, faire EN PLUS le rattrapage des retardataires : sonder
+   les dates du Journal des 14 derniers jours et re-tirer intégralement
+   TOUTE date dont le `total` sondé dépasse les « Dirigeants bruts »
+   enregistrés, même d'une seule unité — un seul retardataire peut être
+   le bon fondateur, et un re-tirage coûte ~1 €. Les doublons sont
+   écartés à l'étape 3. Après rattrapage, mettre à jour la ligne du
+   Journal (nouveau total + note « rattrapage effectué le JJ/MM ») ; une
+   date déjà marquée « rattrapage effectué » n'est re-rattrapée que si
+   son total a encore augmenté depuis.
 
 2. **Tirage Pappers** : utiliser `robot/pappers.py` (fonctions
    `tirage_du_jour` puis `filtrer`) avec la clé en variable d'environnement.
