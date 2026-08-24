@@ -96,3 +96,31 @@ jugements). Durée de bout en bout : ~1 h30, dont ~25 min de scraping.
       (rattrapage 7 jours + relances techniques).
 - [ ] Vue Airtable « À examiner » : filtre Score ≥ 1 et Vu décoché, tri
       Score décroissant.
+
+## A/B test URL Finder (24/08, après partage du Sheet)
+
+Phantom LinkedIn Profile URL Finder sur les 56 fondateurs (requête « nom +
+société + ville ») : **4 URLs trouvées sur 56** (dont 1 faux positif
+homonyme), 10 erreurs de requête. Contre **40/56** pour la recherche web
+LLM avec jugement sur extraits. Cause : le Phantom exige la société dans
+la requête, or elle ne figure pas encore sur les profils fraîchement créés.
+
+**Décision : la recherche web LLM est la méthode de production ; le
+Phantom URL Finder est retiré de ce workflow** (le Profile Scraper, lui,
+reste central). Le Google Sheet public « Robot Sourcing - Pilote URL
+Finder » n'a donc plus d'usage quotidien — conservé comme mécanisme de
+secours pour alimenter un Phantom par lots si besoin.
+
+## Note IA (ajoutée le 24/08)
+
+Champ « Note IA » (/20) + « Justification note IA », remplis par Claude
+Sonnet 5 (barème robot/note_ia_prompt.md) pour les profils à score ≥ 1.
+Test sur les 6 profils du pilote : Eliot Andres 19/20, Alban Le Bail 11,
+Jérémie Selana 8, Louis Ramard 7, Louis de Valbray 6, Florian Mazabraud 3.
+Sévérité conforme à l'attendu.
+
+## Automatisation (mise en place le 24/08)
+
+Routine Claude quotidienne à 04:30 UTC (06:30 Paris) qui réveille la
+session de construction du robot et déroule docs/RUNBOOK.md. Tourne dans
+le cloud, ordinateur éteint. Premier run réel : 25/08, à vérifier.
