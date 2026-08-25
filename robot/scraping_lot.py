@@ -32,6 +32,9 @@ def _rec_ids_deja_traites(prefixe_sortie: str) -> set[str]:
 
 
 def scraper_file(fichier_file: str, prefixe_sortie: str, cap: int = config.SCRAPE_DAILY_CAP) -> None:
+    if not config.PHANTOMBUSTER_API_KEY:
+        raise SystemExit("PHANTOMBUSTER_API_KEY absent : sans elle chaque profil "
+                         "sortirait en 401/erreur. Piloter le Phantom via le MCP à la place.")
     deja = _rec_ids_deja_traites(prefixe_sortie)
     reste = max(0, cap - len(deja))
     taches = [t for t in (json.loads(l) for l in open(fichier_file) if l.strip())

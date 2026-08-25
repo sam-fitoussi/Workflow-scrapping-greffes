@@ -8,6 +8,7 @@ un volume pour 0,1 jeton avant de payer la récupération complète.
 import json
 import time
 import unicodedata
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -17,10 +18,27 @@ BASE = "https://api.pappers.fr/v2"
 
 
 def _call(endpoint: str, params: dict) -> dict:
+    """Appel Pappers avec retry : tirage_du_jour fait 26 requêtes par date, et
+    un seul 500 transitoire au milieu ferait re-payer toute la date au run
+    suivant (pas de ligne de Journal) — exactement ce que le Journal doit
+    empêcher."""
     q = {"api_token": config.PAPPERS_API_KEY, **params}
     url = f"{BASE}/{endpoint}?" + urllib.parse.urlencode(q)
-    with urllib.request.urlopen(url) as r:
-        return json.load(r)
+    for attente in (15, 30, None):
+        try:
+            with urllib.request.urlopen(url) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 500, 502, 503, 504) and attente:
+                time.sleep(attente)
+                continue
+            raise
+        except urllib.error.URLError:
+            if attente:
+                time.sleep(attente)
+                continue
+            raise
+    raise RuntimeError("inatteignable")
 
 
 def _sans_accents(s: str) -> str:
