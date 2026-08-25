@@ -91,8 +91,13 @@ petites lectures/écritures (< 10 enregistrements).
    recherche web « "Prénom Nom" linkedin » (+ ville si besoin,
    3 recherches max). Ne PAS exiger que la nouvelle société
    figure sur le profil (elle vient d'être créée) ; valider par
-   localisation, âge estimé, plausibilité ; statuts « Trouvé / Ambigu /
-   Non trouvé ». Pas de relance des non-trouvés (sauf échec technique :
+   localisation, âge estimé, plausibilité. Sémantique STRICTE des
+   statuts : « Trouvé » = candidat UNIQUE et cohérent, pas d'homonyme
+   plausible dans les résultats (quasi certain) ; « Ambigu » = plusieurs
+   candidats plausibles ou doute sérieux ; « Non trouvé » sinon.
+   Reporter ce statut dans les lignes de `contexte.jsonl` sous la clé
+   `statut_linkedin` — c'est lui qui décide du contrôle d'identité de
+   l'étape 5. Pas de relance des non-trouvés (sauf échec technique :
    une seule relance le lendemain). Écrire les résultats dans un JSON de
    cette forme exacte, puis `python3 -m robot.airtable maj tblBngzHytB48MiDK` :
    ```json
@@ -132,10 +137,13 @@ petites lectures/écritures (< 10 enregistrements).
    ⚠️ `sleep` est bloqué par le harness : utiliser
    `python3 -c "import time; time.sleep(N)"` si besoin d'attendre.
 
-5. **Contrôle d'identité (anti-homonymes)** — TOUS les profils scrapés,
-   AVANT le scoring. La pire erreur du pipeline est l'homonyme : un
-   mauvais profil prendrait Score 0 et enterrerait définitivement le vrai
-   fondateur (peut-être excellent). Coût assumé : ~80 appels Sonnet/jour.
+5. **Contrôle d'identité (anti-homonymes)** — les profils scrapés en
+   statut « Ambigu », AVANT le scoring. La pire erreur du pipeline est
+   l'homonyme : un mauvais profil prendrait Score 0 et enterrerait
+   définitivement le vrai fondateur (peut-être excellent). Les « Trouvé »
+   (candidat unique et cohérent) passent directement — quasi sûrs, pas
+   de temps à perdre à les re-confronter au greffe. ~10-15 appels
+   Sonnet/jour.
    `python3 -m robot.verif_identite resultats.jsonl contexte.jsonl verif`
    → `verif_ok.jsonl` (profils confirmés, entrée de l'étape 6) et
    `verif_maj.json` (homonymes écartés : retour en « À chercher » +

@@ -1,12 +1,18 @@
-"""Contrôle d'identité des profils scrapés, AVANT scoring.
+"""Contrôle d'identité des profils scrapés « Ambigu », AVANT scoring.
 
 Pourquoi : un homonyme scrapé à la place du bon fondateur prendrait Score 0
 et serait marqué « traité » — le vrai profil (peut-être excellent) serait
 enterré définitivement. Le faux négatif est l'erreur la plus chère du
-pipeline : on paie donc ~80 appels Sonnet par jour (< 1 €) pour l'éviter.
+pipeline.
 
-Chaque profil scrapé est confronté aux données du greffe (nom, âge, ville,
-société). Verdict binaire :
+Périmètre : SEULS les profils dont la fiche est en statut « Ambigu » sont
+contrôlés (champ "statut_linkedin" des lignes de contexte). Un candidat
+unique et cohérent (« Trouvé ») est quasi certainement le bon : il passe
+directement. Champ absent → on contrôle (défaut prudent). ~10-15 appels
+Sonnet par jour.
+
+Chaque profil contrôlé est confronté aux données du greffe (nom, âge,
+ville, société). Verdict binaire :
   - "ok"      → le profil passe au scoring (fichier <sortie>_ok.jsonl) ;
   - "mauvais" → incompatibilité nette (autre région sans lien, âge
     impossible, parcours contradictoire) : la fiche repart en « À chercher »
@@ -103,12 +109,16 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
     except FileNotFoundError:
         verdicts = {}
 
+    passes_sans_controle = 0
     with open(f_verdicts, "a") as out:
         for l in open(f_resultats):
             if not l.strip():
                 continue
             ligne = json.loads(l)
             if ligne["statut"] != "ok" or ligne["rec_id"] in verdicts:
+                continue
+            if contexte.get(ligne["rec_id"], {}).get("statut_linkedin") == "Trouvé":
+                passes_sans_controle += 1  # candidat unique et cohérent : quasi sûr
                 continue
             try:
                 v = verifier(ligne, contexte)
@@ -134,9 +144,7 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
                 continue
             ligne = json.loads(l)
             v = verdicts.get(ligne["rec_id"])
-            if ligne["statut"] != "ok" or (v and v["verdict"] == "ok"):
-                ok_out.write(json.dumps(ligne, ensure_ascii=False) + "\n")
-            elif v and v["verdict"] == "mauvais":
+            if v and v["verdict"] == "mauvais":
                 ecartes.append({"id": ligne["rec_id"], "fields": {
                     CF["statut"]: "À chercher",
                     CF["linkedin_url"]: "",
@@ -144,9 +152,12 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
                     CF["detail"]: (f"Homonyme écarté le {aujourd_hui} ({ligne.get('url')}) : "
                                    f"{v['raison']} — re-chercher en EXCLUANT cette URL."),
                 }})
+            else:  # « Trouvé » non contrôlés, contrôlés ok, morts et erreurs : scorer_lot gère
+                ok_out.write(json.dumps(ligne, ensure_ascii=False) + "\n")
     json.dump(ecartes, open(f"{prefixe}_maj.json", "w"), ensure_ascii=False)
     n_ok = sum(1 for v in verdicts.values() if v["verdict"] == "ok")
-    print(f"{n_ok} confirmés, {len(ecartes)} homonymes écartés (repartent en recherche).")
+    print(f"{passes_sans_controle} « Trouvé » non contrôlés, {n_ok} Ambigus confirmés, "
+          f"{len(ecartes)} homonymes écartés (repartent en recherche).")
 
 
 if __name__ == "__main__":

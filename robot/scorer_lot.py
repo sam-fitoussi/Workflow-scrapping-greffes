@@ -99,8 +99,7 @@ def main(f_resultats: str, f_ref: str, f_contexte: str, prefixe: str) -> None:
             c = contexte.get(r["rec_id"], {})
             nom = f"{c.get('prenom') or ''} {c.get('nom') or ''}".strip() or "(nom inconnu)"
             a_noter.append({"rec_id": r["rec_id"], "nom": nom, "age": c.get("age"),
-                            "societe": c.get("entreprise"), "ville": c.get("ville"),
-                            "score": score, "profil": extrait})
+                            "societe": c.get("entreprise"), "score": score, "profil": extrait})
 
     json.dump(maj, open(f"{prefixe}_maj.json", "w"), ensure_ascii=False)
     with open(f"{prefixe}_a_noter.jsonl", "w") as f:
