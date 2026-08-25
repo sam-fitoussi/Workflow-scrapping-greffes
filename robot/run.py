@@ -91,37 +91,44 @@ def _fiche_fondateur(d: dict, e: dict, rec_entreprise: str) -> dict:
     }}
 
 
-def traiter_date(date_fr: str, sirens_connus: set[str], sortie: pathlib.Path,
-                 note_journal: str = "") -> dict:
-    """Déroule tirage → filtres → insertion → Journal pour UNE date. Retourne les stats."""
+def traiter_date(date_fr: str, entreprises_connues: dict[str, str], sirens_traites: set[str],
+                 sortie: pathlib.Path, note_journal: str = "") -> dict:
+    """Déroule tirage → filtres → insertion → Journal pour UNE date. Retourne les stats.
+
+    Idempotent : un SIREN ne compte comme « traité » que si un FONDATEUR y est
+    rattaché (sirens_traites, bâti sur la table Fondateurs). Une insertion à
+    moitié faite (entreprise créée, fondateurs non) se rejoue donc toute seule,
+    en réutilisant la fiche entreprise existante (entreprises_connues)."""
     jetons_avant = pappers.jetons_restants()
 
     bruts = pappers.tirage_du_jour(date_fr)
     (sortie / f"{date_fr}_bruts.json").write_text(json.dumps(bruts, ensure_ascii=False))
     gardes, _ = pappers.filtrer(bruts)
 
-    # Anti-doublons SIREN (rattrapages, dates retraitées)
-    nouveaux = [g for g in gardes if g["entreprise"]["siren"] not in sirens_connus]
+    # Anti-doublons : sur les fondateurs déjà rattachés, pas sur les entreprises
+    nouveaux = [g for g in gardes if g["entreprise"]["siren"] not in sirens_traites]
     (sortie / f"{date_fr}_gardes.json").write_text(json.dumps(nouveaux, ensure_ascii=False))
 
-    # Une fiche entreprise par SIREN (plusieurs cofondateurs -> même société)
+    # Une fiche entreprise par SIREN (plusieurs cofondateurs -> même société),
+    # créée seulement si elle n'existe pas déjà
     par_siren: dict[str, dict] = {}
     for g in nouveaux:
         par_siren.setdefault(g["entreprise"]["siren"], g)
+    a_creer = [g for siren, g in par_siren.items() if siren not in entreprises_connues]
     payload_ent = [_fiche_entreprise(g["entreprise"], g["dirigeant"].get("_cercle", "Cœur"), date_fr)
-                   for g in par_siren.values()]
+                   for g in a_creer]
     if payload_ent:  # les champs imbriqués Pappers (siege, capital…) peuvent manquer : mesurer
         remplis = sum(1 for p in payload_ent for v in p["fields"].values() if v not in (None, "", []))
         total = sum(len(p["fields"]) for p in payload_ent)
         print(f"{date_fr} : remplissage fiches entreprises {remplis}/{total} champs")
     crees = airtable.inserer(config.TABLE_ENTREPRISES, payload_ent)
-    rec_par_siren = {r["fields"][CE["siren"]]: r["id"] for r in crees}
-    sirens_connus.update(rec_par_siren)
+    entreprises_connues.update({r["fields"][CE["siren"]]: r["id"] for r in crees})
 
     payload_fond = [_fiche_fondateur(g["dirigeant"], g["entreprise"],
-                                     rec_par_siren[g["entreprise"]["siren"]])
+                                     entreprises_connues[g["entreprise"]["siren"]])
                     for g in nouveaux]
     fondateurs = airtable.inserer(config.TABLE_FONDATEURS, payload_fond)
+    sirens_traites.update(g["entreprise"]["siren"] for g in nouveaux)
 
     # File pour la recherche LinkedIn, taguée avec la date source
     with open(sortie / f"{date_fr}_fondateurs.jsonl", "w") as f:
@@ -173,12 +180,17 @@ def main() -> None:
     sortie = pathlib.Path(args.sortie)
     sortie.mkdir(parents=True, exist_ok=True)
 
-    existants = airtable.lire_table(config.TABLE_ENTREPRISES, [CE["siren"]])
-    sirens = {r["fields"].get(CE["siren"]) for r in existants if r["fields"].get(CE["siren"])}
-    print(f"{len(sirens)} SIREN déjà connus.")
+    ent = airtable.lire_table(config.TABLE_ENTREPRISES, [CE["siren"]])
+    entreprises_connues = {r["fields"][CE["siren"]]: r["id"]
+                           for r in ent if r["fields"].get(CE["siren"])}
+    fond = airtable.lire_table(config.TABLE_FONDATEURS, [CF["siren_cible"]])
+    sirens_traites = {r["fields"].get(CF["siren_cible"])
+                      for r in fond if r["fields"].get(CF["siren_cible"])}
+    print(f"{len(entreprises_connues)} entreprises connues, "
+          f"{len(sirens_traites)} SIREN avec fondateurs rattachés.")
 
     for date_fr in args.dates:
-        stats = traiter_date(date_fr, sirens, sortie, args.note)
+        stats = traiter_date(date_fr, entreprises_connues, sirens_traites, sortie, args.note)
         print(json.dumps(stats, ensure_ascii=False))
 
 

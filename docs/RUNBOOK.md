@@ -80,19 +80,34 @@ petites lectures/écritures (< 10 enregistrements).
    figure sur le profil (elle vient d'être créée) ; valider par
    localisation, âge estimé, plausibilité ; statuts « Trouvé / Ambigu /
    Non trouvé ». Pas de relance des non-trouvés (sauf échec technique :
-   une seule relance le lendemain). Écrire les résultats (statut, URL,
-   méthode) dans un JSON puis `python3 -m robot.airtable maj`.
+   une seule relance le lendemain). Écrire les résultats dans un JSON de
+   cette forme exacte, puis `python3 -m robot.airtable maj tblBngzHytB48MiDK` :
+   ```json
+   [{"id": "<rec_id>", "fields": {
+       "flddKwLMI63aBsSZQ": "Trouvé",            // statut : Trouvé / Ambigu / Non trouvé
+       "fldOuQobUTZdWT8iz": "https://…",         // URL LinkedIn (omettre si Non trouvé)
+       "fldgf0zCUWs3jT2qB": "Recherche web"}}]   // méthode
+   ```
 
 4. **Scraping** (script en tâche de fond) : construire la file JSONL
    (`{"rec_id", "url"}` par ligne) : d'abord le reliquat des runs
    précédents (statut « Trouvé »/« Ambigu » avec URL mais sans score),
-   puis les profils du jour. Lancer EN TÂCHE DE FOND :
+   puis les profils du jour. Pour le reliquat, récupérer AU MÊME MOMENT
+   prénom, nom, âge et la dénomination de la société (table Entreprises,
+   via « SIREN cible ») et écrire un `reliquat_fondateurs.jsonl` au même
+   format que les `*_fondateurs.jsonl` — sans lui, la Note IA de ces
+   profils serait calculée sans nom ni société. Lancer EN TÂCHE DE FOND :
    `python3 -m robot.scraping_lot file.jsonl resultats`
-   puis vaquer (recherches LinkedIn restantes, préparation) et ne lire
-   `resultats.jsonl` qu'à la fin (`resultats.etat` donne l'avancement).
-   Plafond strict : 80 profils/jour, appliqué par le script — un préfixe
-   de sortie PAR JOUR : en cas de relance, les rec_id déjà scrapés sont
-   sautés et comptent dans le plafond. Séquentiel obligatoire — jamais de
+   et pendant les ~45 minutes de scraping, faire le travail qui n'en
+   dépend pas : recherches LinkedIn restantes, étape 5a (`ref.json`),
+   concaténation de `contexte.jsonl`. Lire `resultats.jsonl` une seule
+   fois à la fin (`resultats.etat` donne l'avancement).
+   Plafond strict : 80 profils/jour, appliqué par le script (en cas de
+   relance dans la même session, les rec_id déjà scrapés sont sautés et
+   comptent dans le plafond). Le compteur ne survit PAS à la session :
+   ne jamais lancer un second run scrapant le même jour (un « Run now »
+   manuel un jour de run automatique = jusqu'à 160 profils : s'abstenir
+   de scraper dans ce cas). Séquentiel obligatoire — jamais de
    parallélisme sur le compte LinkedIn.
    ⚠️ Si on pilote PhantomBuster via MCP : utiliser
    `containers_fetch_result_object`, jamais `containers_fetch`
@@ -134,6 +149,13 @@ petites lectures/écritures (< 10 enregistrements).
 - **Session compactée en plein run** : l'état est sur disque (fichiers du
   répertoire `--sortie`, `resultats.jsonl`, Journal déjà écrit). Reprendre
   à l'étape en cours, ne jamais re-tirer une date déjà au Journal.
+- **Session morte (timeout, plantage)** : le disque disparaît avec le
+  conteneur — il n'est qu'un cache de session. **L'état durable est dans
+  Airtable** : le Journal protège les dates, la déduplication de
+  `robot/run.py` se fait sur les fondateurs rattachés (une date à moitié
+  insérée se rejoue toute seule), et les fiches « Trouvé/Ambigu avec URL
+  sans score » forment le reliquat repris au run suivant. Ne rien
+  reconstruire à la main : relancer la procédure normale suffit.
 
 ## Ce que le run ne fait JAMAIS
 
