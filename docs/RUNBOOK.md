@@ -122,7 +122,13 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
        "fldgf0zCUWs3jT2qB": "Recherche web"}}]
    ```
    (champs : statut « Trouvé / Ambigu / Non trouvé » ; URL LinkedIn, à
-   omettre si non trouvé ; méthode)
+   omettre si non trouvé ; méthode). Pour une fiche qui était en Anomalie
+   « homonyme écarté » et dont la re-recherche aboutit (nouveau candidat
+   trouvé) : ajouter `"flddifOPKnUCBSfC4": false` au payload — l'anomalie
+   est résolue, on décoche (en gardant « Détail score » intact : c'est
+   l'historique des exclusions). Les autres anomalies (URL morte,
+   non-vérifié, 2e homonyme) restent cochées : ce sont des états
+   terminaux ou des informations permanentes.
 
 4. **Scraping** (script en tâche de fond) : construire la file JSONL
    (`{"rec_id", "url"}` par ligne) : d'abord le reliquat des runs
@@ -134,9 +140,11 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    profils serait calculée sans nom ni société. Lancer EN TÂCHE DE FOND :
    `python3 -m robot.scraping_lot file.jsonl resultats`
    et pendant les ~45 minutes de scraping, faire le travail qui n'en
-   dépend pas : recherches LinkedIn restantes, étape 6a (`ref.json`),
-   concaténation de `contexte.jsonl`. Lire `resultats.jsonl` une seule
-   fois à la fin (`resultats.etat` donne l'avancement).
+   dépend pas : recherches LinkedIn restantes, étape 6a (`ref.json`), et
+   surtout **construire `contexte.jsonl`** = concaténation des
+   `*_fondateurs.jsonl` du jour + `reliquat_fondateurs.jsonl` — il est
+   REQUIS dès l'étape 5. Lire `resultats.jsonl` une seule fois à la fin
+   (`resultats.etat` donne l'avancement).
    Plafond strict : 80 profils/jour, appliqué par le script (en cas de
    relance dans la MÊME session — après compaction par exemple — les
    rec_id déjà scrapés sont sur disque, sautés, et comptent dans le
@@ -172,8 +180,7 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
 6. **Scoring déterministe** (tout scripté) :
    a. Lire la table Scoring UNE fois : `python3 -m robot.airtable lire
       tblHdqhFxJsxSLFeR ref.json fldvdr7IADGRDYyG6 fldYH2QUzs5ewKsap`.
-   b. Concaténer les `*_fondateurs.jsonl` (jour + reliquat) en
-      `contexte.jsonl`, puis :
+   b. Avec le `contexte.jsonl` déjà construit à l'étape 4 :
       `python3 -m robot.scorer_lot verif_ok.jsonl ref.json contexte.jsonl score`
       → `score_maj.json` (Score / Détail / Résumé / extrait JSON tronqué à
       2500 caractères, et « Non trouvé » + Anomalie pour les URLs mortes)
@@ -190,7 +197,10 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    court, ex. « Robot sourcing : N profils à examiner ») ET constituer le
    message final de la session. Structure : entonnoir (bruts → gardés →
    URLs → scrapés), coût Pappers + solde, profils à score ≥ 1 avec Note
-   IA et justification, anomalies. Ne rien relancer ensuite.
+   IA et justification, anomalies — en NOMMANT les profils concernés
+   (notamment les « non vérifiés » de l'étape 5, dont la fiche ne porte
+   que le drapeau : le rapport est le seul endroit où le motif apparaît).
+   Ne rien relancer ensuite.
    Repère d'état utile : un champ « Score » rempli vaut marqueur « déjà
    traité » pour tout le pipeline aval.
 

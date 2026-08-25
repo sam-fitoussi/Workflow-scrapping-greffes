@@ -110,8 +110,11 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
         fiches = {r["id"]: r["fields"]
                   for r in airtable.lire_table(config.TABLE_FONDATEURS,
                                                [CF["statut"], CF["detail"]])}
-    except SystemExit:
-        fiches = {}  # pas de PAT : tout contrôler, sans historique d'exclusions
+    except SystemExit as e:
+        print(f"⚠️ Statuts Airtable illisibles ({e}) : contrôle de TOUS les profils, "
+              f"SANS historique d'exclusions (une fiche au 2e homonyme peut reboucler). "
+              f"À signaler dans le rapport.")
+        fiches = {}
 
     f_verdicts = f"{prefixe}.jsonl"
     try:
