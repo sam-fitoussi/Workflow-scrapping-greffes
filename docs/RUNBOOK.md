@@ -50,19 +50,26 @@ petites lectures/écritures (< 10 enregistrements).
 
 1. **Dates cibles.** Pappers indexe avec ~2 jours ouvrés de retard : ne
    JAMAIS viser une date fixe.
-   a. `python3 -m robot.run --sonde` → totaux publiés pour J-1..J-7
-      (0,1 jeton par date sondée).
-   b. Lire le Journal des runs (petite table : MCP ou
+   a. Lire d'abord le Journal des runs (petite table : MCP ou
       `python3 -m robot.airtable lire`).
+   b. Sonder UNIQUEMENT les dates absentes du Journal :
+      `python3 -m robot.run --sonde --sauf <dates déjà au Journal>`
+      (0,1 jeton par date sondée — sonder une date déjà traitée ne sert
+      qu'au rattrapage du dimanche).
    c. Dates cibles = celles avec `total > 0` SANS ligne au Journal. S'il
-      n'y en a aucune : terminer proprement avec un rapport « rien de
-      nouveau publié par Pappers ».
-   d. Le dimanche, rattrapage : sonder les dates du Journal des 14
-      derniers jours et re-traiter TOUTE date dont le total sondé dépasse
-      les « Dirigeants bruts » enregistrés, même d'une unité. Mettre à
-      jour la ligne du Journal (nouveau total + note « rattrapage effectué
-      le JJ/MM ») ; une date déjà rattrapée ne l'est à nouveau que si son
-      total a encore augmenté.
+      n'y en a aucune : NE PAS tirer chez Pappers, mais dérouler quand
+      même les étapes 3 à 7 sur les reliquats (fiches « À chercher »,
+      fiches avec URL sans score), puis le rapport.
+   d. Le dimanche, rattrapage : sonder aussi les dates du Journal des 14
+      derniers jours (`--sonde --jours 14`, sans `--sauf`) et re-traiter
+      TOUTE date dont le total sondé dépasse la colonne « **Bruts cœur** »
+      du Journal, même d'une unité. ⚠️ Comparer au sondage la colonne
+      « Bruts cœur », JAMAIS « Dirigeants bruts » : le sondage ne voit que
+      le cercle cœur, alors que « Dirigeants bruts » inclut la périphérie
+      — comparer à la mauvaise colonne rend le rattrapage aveugle. Mettre
+      à jour la ligne du Journal (nouveaux totaux + note « rattrapage
+      effectué le JJ/MM ») ; une date déjà rattrapée ne l'est à nouveau
+      que si son total a encore augmenté.
 
 2. **Tirage + filtres + insertion + Journal** (tout-en-un, par date) :
    `python3 -m robot.run --dates <JJ-MM-AAAA> [...] --sortie /tmp/run_du_jour`
@@ -140,8 +147,14 @@ petites lectures/écritures (< 10 enregistrements).
    reprise automatique si relancé) → pousser `notes_maj.json` via
    `python3 -m robot.airtable maj tblBngzHytB48MiDK notes_maj.json`.
 
-7. **Rapport** (modèle) : volumes à chaque étape, coût Pappers, profils à
-   examiner (score ≥ 1) avec leurs notes, anomalies. Ne rien relancer.
+7. **Rapport** (modèle). Dans une session planifiée, personne ne lit le
+   terminal : le rapport doit partir par **PushNotification** (titre
+   court, ex. « Robot sourcing : N profils à examiner ») ET constituer le
+   message final de la session. Structure : entonnoir (bruts → gardés →
+   URLs → scrapés), coût Pappers + solde, profils à score ≥ 1 avec Note
+   IA et justification, anomalies. Ne rien relancer ensuite.
+   Repère d'état utile : un champ « Score » rempli vaut marqueur « déjà
+   traité » pour tout le pipeline aval.
 
 ## Cas particuliers (codifiés — ne pas improviser)
 

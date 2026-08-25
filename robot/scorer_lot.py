@@ -78,7 +78,11 @@ def main(f_resultats: str, f_ref: str, f_contexte: str, prefixe: str) -> None:
             continue
 
         p = r["profil"]
-        ecoles, entreprises = phantoms.extraire_ecoles_entreprises(p)
+        _, entreprises = phantoms.extraire_ecoles_entreprises(p)
+        ecoles = scoring.ecoles_diplomantes([
+            (p.get("linkedinSchoolName"), p.get("linkedinSchoolDegree")),
+            (p.get("linkedinPreviousSchoolName"), p.get("linkedinPreviousSchoolDegree")),
+        ])
         score, detail = scoring.scorer_profil(referentiel, ecoles, entreprises)
         extrait = {k: p.get(k) for k in CHAMPS_PROFIL if p.get(k) is not None}
         maj.append({"id": r["rec_id"], "fields": {

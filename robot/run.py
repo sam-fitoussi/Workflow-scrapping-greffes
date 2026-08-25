@@ -38,11 +38,16 @@ def _iso(date_fr: str) -> str:
     return f"{a}-{m}-{j}"
 
 
-def sonder(nb_jours: int = 7) -> dict[str, int]:
-    """Total de dirigeants cercle cœur publiés pour J-1..J-nb_jours (0,1 jeton/date)."""
+def sonder(nb_jours: int = 7, sauf: set[str] | None = None) -> dict[str, int]:
+    """Total de dirigeants cercle cœur publiés pour J-1..J-nb_jours (0,1 jeton/date).
+
+    `sauf` : dates JJ-MM-AAAA à ne pas sonder (déjà au Journal — les sonder
+    quand même ne sert qu'au rattrapage du dimanche)."""
     totaux = {}
     for i in range(1, nb_jours + 1):
         d = (dt.date.today() - dt.timedelta(days=i)).strftime("%d-%m-%Y")
+        if sauf and d in sauf:
+            continue
         r = pappers._call("recherche-dirigeants", {
             "date_immatriculation_rcs_min": d,
             "date_immatriculation_rcs_max": d,
@@ -144,13 +149,16 @@ def traiter_date(date_fr: str, entreprises_connues: dict[str, str], sirens_trait
             }, ensure_ascii=False) + "\n")
 
     jetons_apres = pappers.jetons_restants()
-    stats = {"date": date_fr, "bruts": len(bruts), "gardes": len(gardes),
+    stats = {"date": date_fr, "bruts": len(bruts),
+             "bruts_coeur": sum(1 for r in bruts if r.get("_cercle") == "Cœur"),
+             "gardes": len(gardes),
              "inseres": len(fondateurs), "jetons": round(jetons_avant - jetons_apres, 1)}
 
     # Ligne du Journal écrite IMMÉDIATEMENT (jamais deux fois la même journée payée)
     airtable.inserer(config.TABLE_JOURNAL, [{"fields": {
         CJ["date_traitee"]: _iso(date_fr),
         CJ["bruts"]: stats["bruts"],
+        CJ["bruts_coeur"]: stats["bruts_coeur"],
         CJ["gardes"]: stats["gardes"],
         CJ["inseres"]: stats["inseres"],
         CJ["jetons"]: stats["jetons"],
@@ -164,11 +172,14 @@ def main() -> None:
     p.add_argument("--dates", nargs="*", default=[], help="dates JJ-MM-AAAA à traiter")
     p.add_argument("--sortie", default="sorties", help="répertoire de travail")
     p.add_argument("--sonde", action="store_true", help="sonder J-1..J-7 et sortir")
+    p.add_argument("--sauf", nargs="*", default=[],
+                   help="avec --sonde : dates JJ-MM-AAAA à ne pas sonder (déjà au Journal)")
+    p.add_argument("--jours", type=int, default=7, help="avec --sonde : profondeur en jours")
     p.add_argument("--note", default="", help="note à inscrire au Journal")
     args = p.parse_args()
 
     if args.sonde:
-        print(json.dumps(sonder(), ensure_ascii=False, indent=1))
+        print(json.dumps(sonder(args.jours, set(args.sauf)), ensure_ascii=False, indent=1))
         return
 
     solde = pappers.jetons_restants()

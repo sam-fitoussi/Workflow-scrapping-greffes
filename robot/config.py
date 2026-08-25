@@ -61,6 +61,7 @@ CHAMPS_SCORING = {
 CHAMPS_JOURNAL = {
     "date_traitee": "fldKieRbvDVm3Dco8",
     "bruts": "fldLxXqXkAbGR1lU2",
+    "bruts_coeur": "fld6rwWkS7lnBmbgV",
     "gardes": "fldO2aWpzwENTtqGT",
     "inseres": "fldxKHj8ggInGxFJJ",
     "jetons": "fldwxew9bvypCXTH8",

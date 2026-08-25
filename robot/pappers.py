@@ -50,12 +50,14 @@ def tirage_du_jour(date_immat: str) -> list[dict]:
     }
 
     resultats = []
+    vus = set()
     coeur = _call("recherche-dirigeants", {**commun, "code_naf": ",".join(config.NAF_COEUR)})
     for r in coeur["resultats"]:
+        vus.add((r.get("nom"), r.get("prenom"), r.get("date_de_naissance")))
         r["_cercle"] = "Cœur"
         resultats.append(r)
 
-    vus = set()
+    # La périphérie se déduplique contre le cœur ET entre mots-clés
     for kw in config.MOTS_CLES_OBJET_SOCIAL:
         d = _call("recherche-dirigeants", {
             **commun,
