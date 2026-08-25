@@ -16,6 +16,56 @@ AIRTABLE_BASE_ID = "appdJUoNvhEi5jsJr"
 TABLE_ENTREPRISES = "tblxNwg1hpC3xbVgA"
 TABLE_FONDATEURS = "tblBngzHytB48MiDK"
 TABLE_SCORING = "tblHdqhFxJsxSLFeR"
+TABLE_JOURNAL = "tblbGtPsnQziEQBKu"
+
+# IDs de champs (stables tant que les colonnes ne sont pas supprimées).
+# Les payloads REST utilisent ces IDs, jamais les noms.
+CHAMPS_ENTREPRISES = {
+    "denomination": "fldfTLBoSAhwy8qyw",
+    "siren": "fldhrLcB6coMEvZze",
+    "date_immat": "fldExc1B8lRcCCtw4",
+    "date_creation": "fldYRFPsDP64OLGki",
+    "forme": "fldTeHoJqyTajFVn9",
+    "naf": "fldlIcLOcqlSDpkMw",
+    "libelle_naf": "fldRm89qChDwSNrlC",
+    "ville": "fld6rNg3xPODZyPsk",
+    "dept": "fldYSUDBnaAQPiKBF",
+    "capital": "fldQboySuwu1YdkT8",
+    "cercle": "fldHbV0YbbEEoU096",
+    "lien_pappers": "fldBRVa9S7lEttRhP",
+}
+CHAMPS_FONDATEURS = {
+    "nom_complet": "fld7WKOhWhnUMDQMo",
+    "prenom": "fldCh0cSd09qsCyW0",
+    "nom": "fldUVawLlUI8jCOqs",
+    "age": "fld4aLcd12SoatOec",
+    "qualite": "fldXs4LLWRFCzZ4vX",
+    "ville": "fldFMhPBQaBibMqgx",
+    "entreprise": "fldNFWeKSmZ5U6M7V",
+    "linkedin_url": "fldOuQobUTZdWT8iz",
+    "statut": "flddKwLMI63aBsSZQ",
+    "methode": "fldgf0zCUWs3jT2qB",
+    "score": "fld9vwNO3qNOoqbe4",
+    "detail": "fldI248T6i6a9qvYA",
+    "resume": "fldcCc78Gb1WGWoUL",
+    "siren_cible": "fldJAGwDDXJBbT8fZ",
+    "json": "fldPNLJDDdWPWvAMg",
+    "note_ia": "fldDARjR1pwhcxxxM",
+    "justification": "fldyQkdNmlJWjLXxv",
+    "anomalie": "flddifOPKnUCBSfC4",
+}
+CHAMPS_SCORING = {
+    "nom": "fldvdr7IADGRDYyG6",
+    "points": "fldYH2QUzs5ewKsap",
+}
+CHAMPS_JOURNAL = {
+    "date_traitee": "fldKieRbvDVm3Dco8",
+    "bruts": "fldLxXqXkAbGR1lU2",
+    "gardes": "fldO2aWpzwENTtqGT",
+    "inseres": "fldxKHj8ggInGxFJJ",
+    "jetons": "fldwxew9bvypCXTH8",
+    "notes": "fldIUKYqke6xnHAX4",
+}
 
 # --- PhantomBuster (agents existants du compte) ---
 PHANTOM_URL_FINDER_ID = "6409925669476364"   # Deal Flow - Linkedin Profile URL Finder
