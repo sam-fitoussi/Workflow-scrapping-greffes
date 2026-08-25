@@ -44,6 +44,27 @@ plusieurs milliards.
 Hésite pas à regarder le profil et appliquer du bon sens même sans suivre
 à la lettre ce qui est écrit ici.
 
+## LA SOCIÉTÉ CRÉÉE COMPTE AUSSI
+
+La société fraîchement immatriculée est un indice à part entière. Quand son
+nom ET des indices concordants (activité déclarée au greffe, contenu du
+profil) rendent 100 % évident qu'il ne s'agit pas d'une startup dans
+laquelle un fonds pourrait investir — structure de conseil ou de freelance
+(« Dupont Conseil », « X Consulting », profil « consultant indépendant »),
+agence de services ou de prestation, holding patrimoniale, activité
+artisanale, commerciale ou locale sans dimension produit — plafonne la note
+à 7, sauf dans le cas exceptionnel où le fondateur a un profil génial et
+semble avoir de vraies chances, vu son parcours, de monter une boîte tech à
+forte ambition à court horizon. Mentionne-le dans la justification.
+
+ATTENTION, dans l'autre sens : un nom opaque, générique, provisoire ou sans
+rapport apparent avec un produit ne veut RIEN dire — les meilleurs
+fondateurs immatriculent très tôt, souvent sous un nom de code (le meilleur
+profil jamais détecté par ce robot avait immatriculé « APPFLARES »). Ne
+baisse JAMAIS la note sur le seul nom, ni sur l'absence d'information : ce
+plafond ne s'applique qu'à l'évidence convergente. Dans le doute, juge le
+fondateur, pas le nom.
+
 ## ÉCHELLE (sois sévère, l'inflation de notes rend l'outil inutile)
 
 - **20** : exceptionnel. Moins de 5 profils de ce calibre lancent une
