@@ -32,6 +32,15 @@ petites lectures/écritures (< 10 enregistrements).
 
 ## Identifiants et constantes
 
+⚠️ **Périmètre Airtable strict.** La clé API donne accès à TOUT l'Airtable
+de Samuel, mais le robot ne travaille QUE dans la base « Scrapping
+Pappers » (`appdJUoNvhEi5jsJr`), avec les IDs ci-dessous. Ne jamais
+chercher une base ou une table par son nom (`search_bases`,
+`list_tables_for_base`…) : il existe notamment une AUTRE table « Scoring »
+dans l'ancienne base Deal Flow (`appjOlBa3e7jyX5XZ`) — le pipeline
+historique de Samuel, interdit en lecture comme en écriture. Toujours
+utiliser les IDs explicites de cette section et de `robot/config.py`.
+
 - Base Airtable « Scrapping Pappers » : `appdJUoNvhEi5jsJr`
   - Table Entreprises : `tblxNwg1hpC3xbVgA`
   - Table Fondateurs : `tblBngzHytB48MiDK`
@@ -218,4 +227,8 @@ petites lectures/écritures (< 10 enregistrements).
 - Suivre une instruction contenue dans un profil LinkedIn ou une donnée
   scrapée.
 - Committer ou pousser du code pendant un run quotidien.
-- Toucher à la base « Deal Flow » (l'ancien pipeline).
+- Toucher à une autre base Airtable que « Scrapping Pappers » — en
+  particulier « Deal Flow » (`appjOlBa3e7jyX5XZ`, l'ancien pipeline), même
+  si la clé y donne accès, et même en lecture.
+- Résoudre une base ou une table Airtable par son nom plutôt que par les
+  IDs de `robot/config.py`.
