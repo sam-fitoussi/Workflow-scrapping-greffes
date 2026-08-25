@@ -19,6 +19,7 @@ main » que là où il apporte un jugement :
 | Recherche LinkedIn | modèle | recherches web + jugement |
 | Écriture des URLs trouvées dans Airtable | script | `python3 -m robot.airtable maj` |
 | Scraping des profils | script en tâche de fond | `python3 -m robot.scraping_lot` |
+| Contrôle d'identité (anti-homonymes) | script | `python3 -m robot.verif_identite` |
 | Scoring + payloads de mise à jour | script | `python3 -m robot.scorer_lot` |
 | Note IA | script | `python3 -m robot.note_ia` |
 | Rapport final | modèle | résumé en français |
@@ -58,7 +59,7 @@ petites lectures/écritures (< 10 enregistrements).
       qu'au rattrapage du dimanche).
    c. Dates cibles = celles avec `total > 0` SANS ligne au Journal. S'il
       n'y en a aucune : NE PAS tirer chez Pappers, mais dérouler quand
-      même les étapes 3 à 7 sur les reliquats (fiches « À chercher »,
+      même les étapes 3 à 8 sur les reliquats (fiches « À chercher »,
       fiches avec URL sans score), puis le rapport.
    d. Le dimanche, rattrapage : sonder aussi les dates du Journal des 14
       derniers jours (`--sonde --jours 14`, sans `--sauf`) et re-traiter
@@ -113,7 +114,7 @@ petites lectures/écritures (< 10 enregistrements).
    profils serait calculée sans nom ni société. Lancer EN TÂCHE DE FOND :
    `python3 -m robot.scraping_lot file.jsonl resultats`
    et pendant les ~45 minutes de scraping, faire le travail qui n'en
-   dépend pas : recherches LinkedIn restantes, étape 5a (`ref.json`),
+   dépend pas : recherches LinkedIn restantes, étape 6a (`ref.json`),
    concaténation de `contexte.jsonl`. Lire `resultats.jsonl` une seule
    fois à la fin (`resultats.etat` donne l'avancement).
    Plafond strict : 80 profils/jour, appliqué par le script (en cas de
@@ -131,23 +132,34 @@ petites lectures/écritures (< 10 enregistrements).
    ⚠️ `sleep` est bloqué par le harness : utiliser
    `python3 -c "import time; time.sleep(N)"` si besoin d'attendre.
 
-5. **Scoring déterministe** (tout scripté) :
+5. **Contrôle d'identité (anti-homonymes)** — TOUS les profils scrapés,
+   AVANT le scoring. La pire erreur du pipeline est l'homonyme : un
+   mauvais profil prendrait Score 0 et enterrerait définitivement le vrai
+   fondateur (peut-être excellent). Coût assumé : ~80 appels Sonnet/jour.
+   `python3 -m robot.verif_identite resultats.jsonl contexte.jsonl verif`
+   → `verif_ok.jsonl` (profils confirmés, entrée de l'étape 6) et
+   `verif_maj.json` (homonymes écartés : retour en « À chercher » +
+   Anomalie + URL exclue notée dans Détail — la recherche du run suivant
+   les reprend en excluant cette URL), à pousser via
+   `python3 -m robot.airtable maj tblBngzHytB48MiDK verif_maj.json`.
+
+6. **Scoring déterministe** (tout scripté) :
    a. Lire la table Scoring UNE fois : `python3 -m robot.airtable lire
       tblHdqhFxJsxSLFeR ref.json fldvdr7IADGRDYyG6 fldYH2QUzs5ewKsap`.
    b. Concaténer les `*_fondateurs.jsonl` (jour + reliquat) en
       `contexte.jsonl`, puis :
-      `python3 -m robot.scorer_lot resultats.jsonl ref.json contexte.jsonl score`
+      `python3 -m robot.scorer_lot verif_ok.jsonl ref.json contexte.jsonl score`
       → `score_maj.json` (Score / Détail / Résumé / extrait JSON tronqué à
       2500 caractères, et « Non trouvé » + Anomalie pour les URLs mortes)
       et `score_a_noter.jsonl` (profils à score ≥ 1).
    c. Pousser : `python3 -m robot.airtable maj tblBngzHytB48MiDK score_maj.json`.
 
-6. **Note IA** : `python3 -m robot.note_ia score_a_noter.jsonl notes`
+7. **Note IA** : `python3 -m robot.note_ia score_a_noter.jsonl notes`
    (barème `robot/note_ia_prompt.md`, claude-sonnet-5, notation DURE ;
    reprise automatique si relancé) → pousser `notes_maj.json` via
    `python3 -m robot.airtable maj tblBngzHytB48MiDK notes_maj.json`.
 
-7. **Rapport** (modèle). Dans une session planifiée, personne ne lit le
+8. **Rapport** (modèle). Dans une session planifiée, personne ne lit le
    terminal : le rapport doit partir par **PushNotification** (titre
    court, ex. « Robot sourcing : N profils à examiner ») ET constituer le
    message final de la session. Structure : entonnoir (bruts → gardés →

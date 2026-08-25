@@ -73,7 +73,7 @@ def main(f_resultats: str, f_ref: str, f_contexte: str, prefixe: str) -> None:
             maj.append({"id": r["rec_id"], "fields": {
                 CF["statut"]: "Non trouvé",
                 CF["anomalie"]: True,
-                CF["score"]: 0,  # Score rempli = marqueur « déjà traité » (RUNBOOK §7)
+                CF["score"]: 0,  # Score rempli = marqueur « déjà traité » (RUNBOOK §8)
                 CF["detail"]: f"URL LinkedIn morte ou profil vide le {aujourd_hui}",
             }})
             continue
