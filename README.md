@@ -1,4 +1,4 @@
-# Robot-sourcing
+# Workflow-scrapping-greffes
 
 Robot de sourcing pre-seed : détecte chaque jour les sociétés tout juste
 immatriculées aux greffes (via l'API Pappers), retrouve les profils LinkedIn
