@@ -75,7 +75,10 @@ CHAMPS_JOURNAL = {
 # --- PhantomBuster (agents existants du compte) ---
 PHANTOM_URL_FINDER_ID = "6409925669476364"   # Deal Flow - Linkedin Profile URL Finder
 PHANTOM_SCRAPER_ID = "4668942683298432"      # Deal Flow - Linkedin Profile Scraper
-SCRAPE_DAILY_CAP = 80  # plafond de profils scrapés par jour (protection du compte LinkedIn)
+# Plafond de profils scrapés par jour. PhantomBuster indique 1000-1500/jour
+# sans risque sur un compte LinkedIn standard ; 250 garde une marge x4-6
+# (compte partagé avec d'autres automatisations). Toujours séquentiel.
+SCRAPE_DAILY_CAP = 250
 
 # --- Périmètre Pappers ---
 # Formes juridiques : SAS (5710) et SASU (5720)

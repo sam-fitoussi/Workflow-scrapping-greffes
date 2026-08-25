@@ -145,7 +145,11 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    `*_fondateurs.jsonl` du jour + `reliquat_fondateurs.jsonl` — il est
    REQUIS dès l'étape 5. Lire `resultats.jsonl` une seule fois à la fin
    (`resultats.etat` donne l'avancement).
-   Plafond strict : 80 profils/jour, appliqué par le script (en cas de
+   Plafond strict : 250 profils/jour (config.SCRAPE_DAILY_CAP —
+   PhantomBuster annonce 1000-1500/jour sans risque, on garde une marge
+   x4-6 car le compte LinkedIn est partagé), appliqué par le script. À
+   ~38 s par profil, une journée pleine peut prendre jusqu'à ~2h40 de
+   scraping : le lancer TÔT dans le run, en tâche de fond. (En cas de
    relance dans la MÊME session — après compaction par exemple — les
    rec_id déjà scrapés sont sur disque, sautés, et comptent dans le
    plafond : la reprise est sûre). Le compteur ne survit pas à la
@@ -233,7 +237,8 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
 
 ## Ce que le run ne fait JAMAIS
 
-- Dépasser 80 profils scrapés/jour ou paralléliser le scraping.
+- Dépasser 250 profils scrapés/jour (config.SCRAPE_DAILY_CAP) ou
+  paralléliser le scraping.
 - Re-tirer une date déjà traitée en dehors du rattrapage du dimanche.
 - Faire transiter un payload Airtable volumineux par le contexte (fichiers
   + `robot.airtable`, toujours).

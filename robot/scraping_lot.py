@@ -9,7 +9,8 @@ profils UN PAR UN (le compte LinkedIn ne supporte pas le parallélisme :
 
 Reprise : relancer avec le MÊME préfixe de sortie (un préfixe par jour).
 Les rec_id déjà présents dans <sortie>.jsonl sont sautés et comptent dans
-le plafond — le cap de 80 est donc bien quotidien, pas par invocation.
+le plafond — le cap (config.SCRAPE_DAILY_CAP) est donc bien quotidien,
+pas par invocation.
 Une URL morte (404 / résultat vide) sort en statut "mort" : le RUNBOOK
 demande alors « Non trouvé » + Anomalie (fait par robot/scorer_lot.py).
 
