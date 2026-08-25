@@ -48,11 +48,14 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
   - Table Journal des runs : `tblbGtPsnQziEQBKu`
   - Les IDs de champs sont dans `robot/config.py` (CHAMPS_*).
 - PhantomBuster : Profile Scraper `4668942683298432` (l'URL Finder est retiré).
-- Clés API (`PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT), `ANTHROPIC_API_KEY`,
-  et `PHANTOMBUSTER_API_KEY` si on n'utilise pas le MCP) : leur place est
+- Clés API (`PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT),
+  `ROBOT_ANTHROPIC_API_KEY`, `PHANTOMBUSTER_API_KEY`) : leur place est
   dans les **variables d'environnement de l'environnement d'exécution**
   (configuration claude.ai/code) ; à défaut elles sont fournies dans le
-  prompt de la Routine et à exporter avant tout script.
+  prompt de la Routine et à exporter avant tout script. ⚠️ La clé
+  Anthropic s'appelle `ROBOT_ANTHROPIC_API_KEY` : le nom standard
+  `ANTHROPIC_API_KEY` est une variable réservée que la plateforme filtre
+  (les scripts acceptent les deux noms).
 - Le repo est consulté en LECTURE : ne jamais committer ni pousser pendant
   un run quotidien, quelle que soit la branche imposée par la session.
 

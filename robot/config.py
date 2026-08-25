@@ -8,7 +8,11 @@ import os
 
 PAPPERS_API_KEY = os.environ.get("PAPPERS_API_KEY", "")
 AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY", "")
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+# ANTHROPIC_API_KEY est une variable réservée que la plateforme Claude Code
+# filtre (elle écraserait l'authentification de la session) : l'environnement
+# d'exécution la fournit sous le nom ROBOT_ANTHROPIC_API_KEY.
+ANTHROPIC_API_KEY = (os.environ.get("ROBOT_ANTHROPIC_API_KEY")
+                     or os.environ.get("ANTHROPIC_API_KEY", ""))
 PHANTOMBUSTER_API_KEY = os.environ.get("PHANTOMBUSTER_API_KEY", "")
 
 # --- Airtable (base "Scrapping Pappers") ---
