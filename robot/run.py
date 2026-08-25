@@ -127,8 +127,14 @@ def traiter_date(date_fr: str, entreprises_connues: dict[str, str], sirens_trait
         total = sum(len(p["fields"]) for p in payload_ent)
         print(f"{date_fr} : remplissage fiches entreprises {remplis}/{total} champs")
     crees = airtable.inserer(config.TABLE_ENTREPRISES, payload_ent)
-    entreprises_connues.update({r["fields"][CE["siren"]]: r["id"] for r in crees})
+    entreprises_connues.update({r["fields"].get(CE["siren"]): r["id"]
+                                for r in crees if r["fields"].get(CE["siren"])})
 
+    sans_fiche = [g for g in nouveaux
+                  if g["entreprise"]["siren"] not in entreprises_connues]
+    if sans_fiche:  # théorique (Pappers renvoie toujours le SIREN) mais jamais silencieux
+        print(f"⚠️ {len(sans_fiche)} fondateur(s) sans fiche entreprise (SIREN absent), ignorés")
+        nouveaux = [g for g in nouveaux if g["entreprise"]["siren"] in entreprises_connues]
     payload_fond = [_fiche_fondateur(g["dirigeant"], g["entreprise"],
                                      entreprises_connues[g["entreprise"]["siren"]])
                     for g in nouveaux]

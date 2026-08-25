@@ -94,11 +94,14 @@ petites lectures/écritures (< 10 enregistrements).
    localisation, âge estimé, plausibilité. Sémantique STRICTE des
    statuts : « Trouvé » = candidat UNIQUE et cohérent, pas d'homonyme
    plausible dans les résultats (quasi certain) ; « Ambigu » = plusieurs
-   candidats plausibles ou doute sérieux ; « Non trouvé » sinon.
-   Reporter ce statut dans les lignes de `contexte.jsonl` sous la clé
-   `statut_linkedin` — c'est lui qui décide du contrôle d'identité de
-   l'étape 5. Pas de relance des non-trouvés (sauf échec technique :
-   une seule relance le lendemain). Écrire les résultats dans un JSON de
+   candidats plausibles ou doute sérieux ; « Non trouvé » sinon. (C'est
+   ce statut, relu dans Airtable par le script de l'étape 5, qui décide
+   du contrôle d'identité — rien à reporter à la main.)
+   ⚠️ Pour une fiche « À chercher » avec Anomalie cochée : lire son
+   « Détail score » — il contient une ou des URLs d'homonymes déjà
+   écartés, à EXCLURE des candidats de la nouvelle recherche.
+   Pas de relance des non-trouvés (sauf échec technique : une seule
+   relance le lendemain). Écrire les résultats dans un JSON de
    cette forme exacte, puis `python3 -m robot.airtable maj tblBngzHytB48MiDK` :
    ```json
    [{"id": "<rec_id>", "fields": {
@@ -140,16 +143,19 @@ petites lectures/écritures (< 10 enregistrements).
 5. **Contrôle d'identité (anti-homonymes)** — les profils scrapés en
    statut « Ambigu », AVANT le scoring. La pire erreur du pipeline est
    l'homonyme : un mauvais profil prendrait Score 0 et enterrerait
-   définitivement le vrai fondateur (peut-être excellent). Les « Trouvé »
-   (candidat unique et cohérent) passent directement — quasi sûrs, pas
-   de temps à perdre à les re-confronter au greffe. ~10-15 appels
-   Sonnet/jour.
+   définitivement le vrai fondateur (peut-être excellent). Le script
+   relit lui-même les statuts dans Airtable : les « Trouvé » (candidat
+   unique et cohérent) passent directement — quasi sûrs, pas de temps à
+   perdre à les re-confronter au greffe. ~10-15 appels Sonnet/jour.
    `python3 -m robot.verif_identite resultats.jsonl contexte.jsonl verif`
    → `verif_ok.jsonl` (profils confirmés, entrée de l'étape 6) et
-   `verif_maj.json` (homonymes écartés : retour en « À chercher » +
-   Anomalie + URL exclue notée dans Détail — la recherche du run suivant
-   les reprend en excluant cette URL), à pousser via
-   `python3 -m robot.airtable maj tblBngzHytB48MiDK verif_maj.json`.
+   `verif_maj.json` à pousser via
+   `python3 -m robot.airtable maj tblBngzHytB48MiDK verif_maj.json` :
+   homonymes écartés (retour en « À chercher » + Anomalie + URL exclue
+   dans Détail ; au 2e homonyme écarté sur la même fiche, le script la
+   passe en « Non trouvé » définitif — pas de boucle) et profils non
+   vérifiés pour cause d'API indisponible (ils passent au scoring mais
+   Anomalie est cochée : à signaler dans le rapport, jamais en silence).
 
 6. **Scoring déterministe** (tout scripté) :
    a. Lire la table Scoring UNE fois : `python3 -m robot.airtable lire
@@ -188,6 +194,10 @@ petites lectures/écritures (< 10 enregistrements).
 - **Erreur technique de scraping (statut `erreur`)** : laisser la fiche
   sans score (elle repartira en reliquat), une seule relance au run
   suivant ; si l'erreur se répète, traiter comme URL morte.
+- **Homonyme écarté par le contrôle d'identité** : la fiche revient en
+  « À chercher » avec l'URL exclue dans « Détail score » — la recherche
+  suivante doit l'exclure (cf. étape 3). Le script arrête de lui-même au
+  2e homonyme écarté (« Non trouvé » définitif).
 - **Session compactée en plein run** : l'état est sur disque (fichiers du
   répertoire `--sortie`, `resultats.jsonl`, Journal déjà écrit). Reprendre
   à l'étape en cours, ne jamais re-tirer une date déjà au Journal.
