@@ -110,6 +110,10 @@ def traiter_date(date_fr: str, sirens_connus: set[str], sortie: pathlib.Path,
         par_siren.setdefault(g["entreprise"]["siren"], g)
     payload_ent = [_fiche_entreprise(g["entreprise"], g["dirigeant"].get("_cercle", "Cœur"), date_fr)
                    for g in par_siren.values()]
+    if payload_ent:  # les champs imbriqués Pappers (siege, capital…) peuvent manquer : mesurer
+        remplis = sum(1 for p in payload_ent for v in p["fields"].values() if v not in (None, "", []))
+        total = sum(len(p["fields"]) for p in payload_ent)
+        print(f"{date_fr} : remplissage fiches entreprises {remplis}/{total} champs")
     crees = airtable.inserer(config.TABLE_ENTREPRISES, payload_ent)
     rec_par_siren = {r["fields"][CE["siren"]]: r["id"] for r in crees}
     sirens_connus.update(rec_par_siren)

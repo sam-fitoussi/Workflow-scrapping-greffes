@@ -79,6 +79,7 @@ def inserer(table_id: str, enregistrements: list[dict]) -> list[dict]:
         d = _call("POST", f"{config.AIRTABLE_BASE_ID}/{table_id}", payload={
             "records": enregistrements[i:i + LOT],
             "typecast": True,
+            "returnFieldsByFieldId": True,  # sans quoi la réponse est indexée par NOM de colonne
         })
         crees.extend(d["records"])
         time.sleep(0.25)

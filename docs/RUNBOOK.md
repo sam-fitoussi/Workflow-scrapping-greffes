@@ -19,7 +19,7 @@ main » que là où il apporte un jugement :
 | Recherche LinkedIn | modèle | recherches web + jugement |
 | Écriture des URLs trouvées dans Airtable | script | `python3 -m robot.airtable maj` |
 | Scraping des profils | script en tâche de fond | `python3 -m robot.scraping_lot` |
-| Scoring déterministe | script | `robot/scoring.py` |
+| Scoring + payloads de mise à jour | script | `python3 -m robot.scorer_lot` |
 | Note IA | script | `python3 -m robot.note_ia` |
 | Rapport final | modèle | résumé en français |
 
@@ -38,9 +38,11 @@ petites lectures/écritures (< 10 enregistrements).
   - Table Journal des runs : `tblbGtPsnQziEQBKu`
   - Les IDs de champs sont dans `robot/config.py` (CHAMPS_*).
 - PhantomBuster : Profile Scraper `4668942683298432` (l'URL Finder est retiré).
-- Clés API : fournies dans le prompt de la Routine, à exporter avant tout
-  script : `PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT), `ANTHROPIC_API_KEY`.
-  PhantomBuster passe par le MCP OU par `PHANTOMBUSTER_API_KEY` si fournie.
+- Clés API (`PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT), `ANTHROPIC_API_KEY`,
+  et `PHANTOMBUSTER_API_KEY` si on n'utilise pas le MCP) : leur place est
+  dans les **variables d'environnement de l'environnement d'exécution**
+  (configuration claude.ai/code) ; à défaut elles sont fournies dans le
+  prompt de la Routine et à exporter avant tout script.
 - Le repo est consulté en LECTURE : ne jamais committer ni pousser pendant
   un run quotidien, quelle que soit la branche imposée par la session.
 
@@ -88,27 +90,31 @@ petites lectures/écritures (< 10 enregistrements).
    `python3 -m robot.scraping_lot file.jsonl resultats`
    puis vaquer (recherches LinkedIn restantes, préparation) et ne lire
    `resultats.jsonl` qu'à la fin (`resultats.etat` donne l'avancement).
-   Plafond strict : 80 profils/jour (appliqué par le script). Séquentiel
-   obligatoire — jamais de parallélisme sur le compte LinkedIn.
+   Plafond strict : 80 profils/jour, appliqué par le script — un préfixe
+   de sortie PAR JOUR : en cas de relance, les rec_id déjà scrapés sont
+   sautés et comptent dans le plafond. Séquentiel obligatoire — jamais de
+   parallélisme sur le compte LinkedIn.
    ⚠️ Si on pilote PhantomBuster via MCP : utiliser
    `containers_fetch_result_object`, jamais `containers_fetch`
    (withResultObject=true) qui renvoie ~1000 tokens de logs par profil.
    ⚠️ `sleep` est bloqué par le harness : utiliser
    `python3 -c "import time; time.sleep(N)"` si besoin d'attendre.
 
-5. **Scoring déterministe** : lire la table Scoring UNE fois vers un
-   fichier (`python3 -m robot.airtable lire tblHdqhFxJsxSLFeR ref.json
-   fldvdr7IADGRDYyG6 fldYH2QUzs5ewKsap`), scorer avec `robot/scoring.py`
-   sur les résultats du scraping, et pousser Score / Détail score /
-   Résumé profil / JSON LinkedIn via `python3 -m robot.airtable maj`.
-   Le champ « JSON LinkedIn » contient l'**extrait structuré condensé**
-   du profil (tronqué à 2500 caractères), pas le payload brut.
+5. **Scoring déterministe** (tout scripté) :
+   a. Lire la table Scoring UNE fois : `python3 -m robot.airtable lire
+      tblHdqhFxJsxSLFeR ref.json fldvdr7IADGRDYyG6 fldYH2QUzs5ewKsap`.
+   b. Concaténer les `*_fondateurs.jsonl` (jour + reliquat) en
+      `contexte.jsonl`, puis :
+      `python3 -m robot.scorer_lot resultats.jsonl ref.json contexte.jsonl score`
+      → `score_maj.json` (Score / Détail / Résumé / extrait JSON tronqué à
+      2500 caractères, et « Non trouvé » + Anomalie pour les URLs mortes)
+      et `score_a_noter.jsonl` (profils à score ≥ 1).
+   c. Pousser : `python3 -m robot.airtable maj tblBngzHytB48MiDK score_maj.json`.
 
-6. **Note IA** : profils à score ≥ 1 → JSONL
-   (`{"rec_id","nom","age","societe","score","profil"}`) →
-   `python3 -m robot.note_ia profils.jsonl notes.jsonl` (barème
-   `robot/note_ia_prompt.md`, claude-sonnet-5, notation DURE) → pousser
-   « Note IA » + « Justification note IA » via `robot.airtable maj`.
+6. **Note IA** : `python3 -m robot.note_ia score_a_noter.jsonl notes`
+   (barème `robot/note_ia_prompt.md`, claude-sonnet-5, notation DURE ;
+   reprise automatique si relancé) → pousser `notes_maj.json` via
+   `python3 -m robot.airtable maj tblBngzHytB48MiDK notes_maj.json`.
 
 7. **Rapport** (modèle) : volumes à chaque étape, coût Pappers, profils à
    examiner (score ≥ 1) avec leurs notes, anomalies. Ne rien relancer.
