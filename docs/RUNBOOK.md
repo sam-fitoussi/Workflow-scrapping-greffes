@@ -74,9 +74,14 @@ petites lectures/écritures (< 10 enregistrements).
    et `date_source` — ne pas perdre ce tag, c'est lui qui permet la
    ventilation par journée).
 
-3. **Recherche LinkedIn** (modèle) : pour chaque ligne des
-   `*_fondateurs.jsonl`, recherche web « "Prénom Nom" linkedin » (+ ville
-   si besoin, 3 recherches max). Ne PAS exiger que la nouvelle société
+3. **Recherche LinkedIn** (modèle). Principe général du pipeline : chaque
+   étape reprend D'ABORD ce que la précédente n'a pas fini, en le lisant
+   dans Airtable. Ici : commencer par le reliquat des fiches encore
+   « À chercher » des runs précédents (récupérer rec_id, nom, âge, ville
+   et la dénomination de la société via la table Entreprises), puis
+   traiter les fondateurs du jour (`*_fondateurs.jsonl`). Pour chacun,
+   recherche web « "Prénom Nom" linkedin » (+ ville si besoin,
+   3 recherches max). Ne PAS exiger que la nouvelle société
    figure sur le profil (elle vient d'être créée) ; valider par
    localisation, âge estimé, plausibilité ; statuts « Trouvé / Ambigu /
    Non trouvé ». Pas de relance des non-trouvés (sauf échec technique :
@@ -84,10 +89,12 @@ petites lectures/écritures (< 10 enregistrements).
    cette forme exacte, puis `python3 -m robot.airtable maj tblBngzHytB48MiDK` :
    ```json
    [{"id": "<rec_id>", "fields": {
-       "flddKwLMI63aBsSZQ": "Trouvé",            // statut : Trouvé / Ambigu / Non trouvé
-       "fldOuQobUTZdWT8iz": "https://…",         // URL LinkedIn (omettre si Non trouvé)
-       "fldgf0zCUWs3jT2qB": "Recherche web"}}]   // méthode
+       "flddKwLMI63aBsSZQ": "Trouvé",
+       "fldOuQobUTZdWT8iz": "https://…",
+       "fldgf0zCUWs3jT2qB": "Recherche web"}}]
    ```
+   (champs : statut « Trouvé / Ambigu / Non trouvé » ; URL LinkedIn, à
+   omettre si non trouvé ; méthode)
 
 4. **Scraping** (script en tâche de fond) : construire la file JSONL
    (`{"rec_id", "url"}` par ligne) : d'abord le reliquat des runs
@@ -103,11 +110,13 @@ petites lectures/écritures (< 10 enregistrements).
    concaténation de `contexte.jsonl`. Lire `resultats.jsonl` une seule
    fois à la fin (`resultats.etat` donne l'avancement).
    Plafond strict : 80 profils/jour, appliqué par le script (en cas de
-   relance dans la même session, les rec_id déjà scrapés sont sautés et
-   comptent dans le plafond). Le compteur ne survit PAS à la session :
-   ne jamais lancer un second run scrapant le même jour (un « Run now »
-   manuel un jour de run automatique = jusqu'à 160 profils : s'abstenir
-   de scraper dans ce cas). Séquentiel obligatoire — jamais de
+   relance dans la MÊME session — après compaction par exemple — les
+   rec_id déjà scrapés sont sur disque, sautés, et comptent dans le
+   plafond : la reprise est sûre). Le compteur ne survit pas à la
+   session : dans une SECONDE session le même jour (« Run now » manuel un
+   jour de run automatique, relance après session morte), ne PAS scraper
+   du tout — ce n'est qu'un report d'un jour, le reliquat garantit la
+   reprise au run du lendemain. Séquentiel obligatoire — jamais de
    parallélisme sur le compte LinkedIn.
    ⚠️ Si on pilote PhantomBuster via MCP : utiliser
    `containers_fetch_result_object`, jamais `containers_fetch`
