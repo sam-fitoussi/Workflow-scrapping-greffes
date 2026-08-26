@@ -112,6 +112,9 @@ def traiter_date(date_fr: str, entreprises_connues: dict[str, str], sirens_trait
 
     # Anti-doublons : sur les fondateurs déjà rattachés, pas sur les entreprises
     nouveaux = [g for g in gardes if g["entreprise"]["siren"] not in sirens_traites]
+    # Tri par SIREN : les cofondateurs d'une même société restent groupés
+    # dans le fichier (la recherche et le rapport travaillent par équipe)
+    nouveaux.sort(key=lambda g: g["entreprise"].get("siren") or "")
     (sortie / f"{date_fr}_gardes.json").write_text(json.dumps(nouveaux, ensure_ascii=False))
 
     # Une fiche entreprise par SIREN (plusieurs cofondateurs -> même société),
@@ -178,6 +181,8 @@ def main() -> None:
     p.add_argument("--dates", nargs="*", default=[], help="dates JJ-MM-AAAA à traiter")
     p.add_argument("--sortie", default="sorties", help="répertoire de travail")
     p.add_argument("--sonde", action="store_true", help="sonder J-1..J-7 et sortir")
+    p.add_argument("--auto", action="store_true",
+                   help="avec --sonde : lire le Journal soi-même (calcule --sauf et --jours)")
     p.add_argument("--sauf", nargs="*", default=[],
                    help="avec --sonde : dates JJ-MM-AAAA à ne pas sonder (déjà au Journal)")
     p.add_argument("--jours", type=int, default=7, help="avec --sonde : profondeur en jours")
@@ -185,7 +190,21 @@ def main() -> None:
     args = p.parse_args()
 
     if args.sonde:
-        print(json.dumps(sonder(args.jours, set(args.sauf)), ensure_ascii=False, indent=1))
+        sauf, jours = set(args.sauf), args.jours
+        if args.auto:
+            journal = airtable.lire_table(config.TABLE_JOURNAL, [CJ["date_traitee"]])
+            dates = []
+            for r in journal:
+                iso = r["fields"].get(CJ["date_traitee"])
+                if iso:
+                    a, m, j = iso.split("-")
+                    dates.append(dt.date(int(a), int(m), int(j)))
+            sauf = {d.strftime("%d-%m-%Y") for d in dates}
+            # Profondeur : jusqu'à la plus ancienne date du Journal (les trous
+            # entre deux dates traitées sont ainsi couverts), bornée à 7-14 j
+            jours = min(14, max(7, (dt.date.today() - min(dates)).days)) if dates else 7
+            print(f"--auto : {len(sauf)} dates du Journal exclues, profondeur {jours} jours")
+        print(json.dumps(sonder(jours, sauf), ensure_ascii=False, indent=1))
         return
 
     solde = pappers.jetons_restants()

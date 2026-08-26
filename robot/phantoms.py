@@ -31,7 +31,21 @@ def _call(path: str, payload: dict | None = None, params: dict | None = None) ->
 
 
 def scraper_profil(url_profil: str, timeout_s: int = 180) -> list[dict] | None:
-    """Lance le Profile Scraper sur une URL et attend le résultat."""
+    """Lance le Profile Scraper sur une URL et attend le résultat.
+
+    Un incident réseau transitoire (connection reset) coûte sinon un jour
+    de délai au profil (aller-retour de reliquat) : on retente UNE fois
+    après 10 s avant de laisser l'erreur remonter."""
+    try:
+        return _scraper_profil(url_profil, timeout_s)
+    except TimeoutError:
+        raise  # un vrai timeout de scraping ne se rejoue pas ici
+    except Exception:
+        time.sleep(10)
+        return _scraper_profil(url_profil, timeout_s)
+
+
+def _scraper_profil(url_profil: str, timeout_s: int) -> list[dict] | None:
     launch = _call("agents/launch", {
         "id": config.PHANTOM_SCRAPER_ID,
         "manualLaunch": True,

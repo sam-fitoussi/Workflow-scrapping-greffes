@@ -1,50 +1,41 @@
 # Workflow-scrapping-greffes
 
-Robot de sourcing pre-seed : détecte chaque jour les sociétés tout juste
-immatriculées aux greffes (via l'API Pappers), retrouve les profils LinkedIn
-de leurs fondateurs, les score contre un référentiel d'écoles et
-d'entreprises, et présente les profils retenus dans Airtable.
+Robot de sourcing pre-seed (Frst) : détecte chaque jour les sociétés tout
+juste immatriculées aux greffes (API Pappers), retrouve les profils
+LinkedIn de leurs fondateurs, contrôle leur identité, les score contre un
+référentiel d'écoles et d'entreprises, les note sur 20, et présente les
+profils à examiner dans Airtable.
 
-## Architecture
+## Source de vérité
 
-```
-Pappers (recherche-dirigeants, J-2)
-  └─ filtres déterministes (NAF cœur/périphérie, âge < 45, liste noire,
-     serial-gérants, qualités)
-      └─ Airtable « Scrapping Pappers » : tables Entreprises + Fondateurs
-          └─ recherche des URLs LinkedIn (Phantom URL Finder / recherche web LLM)
-              └─ validation d'identité (règles déterministes puis juge Haiku)
-                  └─ scraping (PhantomBuster LinkedIn Profile Scraper, ≤ 80/jour)
-                      └─ scoring déterministe (table « Scoring », 1 pt / item)
-                          └─ vue « À examiner » (score ≥ 1, non vus), case « Vu »
-```
+**`docs/RUNBOOK.md` fait foi pour tout** : procédure du run quotidien,
+identifiants, plafonds, noms des variables d'environnement, cas
+particuliers. Ce README ne duplique volontairement aucun chiffre ni aucun
+nom de variable — quand un détail diverge entre les deux, c'est le
+runbook qui a raison, et ce README qui est en retard.
 
-## Bases Airtable
+## Contenu du repo
 
-Base **Scrapping Pappers** (`appdJUoNvhEi5jsJr`) :
-
-| Table | Rôle |
+| Chemin | Rôle |
 |---|---|
-| `Scoring` | Référentiel écoles/entreprises (orthographe LinkedIn exacte, 1 point par item, extensible à la main) |
-| `Entreprises` | Sociétés retenues (clé d'unicité : SIREN) |
-| `Fondateurs` | Dirigeants retenus, URL LinkedIn, score, case « Vu » |
+| `docs/RUNBOOK.md` | LA procédure du run quotidien (autoportante) |
+| `docs/PILOTE.md` | Journal du pilote et enseignements |
+| `robot/config.py` | Constantes : périmètre Pappers, filtres, IDs Airtable, plafonds |
+| `robot/pappers.py` | Tirage des immatriculations + filtres déterministes |
+| `robot/run.py` | Orchestrateur : sondage, tirage, insertion, Journal |
+| `robot/reliquat.py` | Reconstruit le travail en attente depuis Airtable |
+| `robot/airtable.py` | Client REST Airtable (payloads sur disque) |
+| `robot/scraping_lot.py` | Boucle de scraping PhantomBuster en tâche de fond |
+| `robot/verif_identite.py` | Contrôle anti-homonymes des profils scrapés |
+| `robot/scorer_lot.py` | Scoring déterministe + payloads de mise à jour |
+| `robot/note_ia.py` | Note IA sur 20 (barème `robot/note_ia_prompt.md`) |
 
-## Anti-doublons / exhaustivité
-
-- Tirage quotidien : **une seule journée d'immatriculation (J-2), jamais
-  retirée deux fois** — chaque résultat Pappers n'est payé qu'une fois
-  (0,1 jeton/résultat).
-- Rattrapage hebdomadaire : re-balayage des 7 derniers jours, doublons
-  écartés par SIREN avant insertion.
-- Pagination par curseur avec vérification `récupérés == total`.
+Le modèle (session Claude planifiée) n'intervient qu'aux deux endroits où
+le jugement compte : la recherche des profils LinkedIn et le rapport
+final. Tout le reste est scripté.
 
 ## Secrets
 
-Aucune clé dans le code. Variables d'environnement attendues :
-`PAPPERS_API_KEY`, `AIRTABLE_API_KEY`, `ANTHROPIC_API_KEY`,
-`PHANTOMBUSTER_API_KEY` (secrets GitHub Actions en production).
-
-## Journal
-
-Voir `docs/PILOTE.md` pour le déroulé et les enseignements du pilote
-(journée d'immatriculations du 20/08/2026).
+Aucune clé dans le code ni dans ce repo, jamais. Les clés vivent dans les
+variables d'environnement de l'environnement d'exécution — noms exacts et
+pièges dans le runbook.

@@ -16,6 +16,7 @@ main » que là où il apporte un jugement :
 | Étape | Qui | Comment |
 |---|---|---|
 | Sondage des dates, tirage, filtres, insertion Airtable, Journal | script | `python3 -m robot.run` |
+| Reconstruction du reliquat + contexte | script | `python3 -m robot.reliquat` |
 | Recherche LinkedIn | modèle | recherches web + jugement |
 | Écriture des URLs trouvées dans Airtable | script | `python3 -m robot.airtable maj` |
 | Scraping des profils | script en tâche de fond | `python3 -m robot.scraping_lot` |
@@ -66,9 +67,10 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    a. Lire d'abord le Journal des runs (petite table : MCP ou
       `python3 -m robot.airtable lire`).
    b. Sonder UNIQUEMENT les dates absentes du Journal :
-      `python3 -m robot.run --sonde --sauf <dates déjà au Journal>`
-      (0,1 jeton par date sondée — sonder une date déjà traitée ne sert
-      qu'au rattrapage du dimanche).
+      `python3 -m robot.run --sonde --auto`
+      (le script lit le Journal lui-même, en exclut les dates traitées et
+      calcule la profondeur ; 0,1 jeton par date sondée. `--sauf`/`--jours`
+      restent disponibles pour forcer à la main).
    c. Dates cibles = celles avec `total > 0` SANS ligne au Journal. S'il
       n'y en a aucune : NE PAS tirer chez Pappers, mais dérouler quand
       même les étapes 3 à 8 sur les reliquats (fiches « À chercher »,
@@ -93,25 +95,30 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    produit `<date>_fondateurs.jsonl` (chaque ligne porte `rec_id` Airtable
    et `date_source` — ne pas perdre ce tag, c'est lui qui permet la
    ventilation par journée).
+   Puis reconstruire le travail en attente depuis Airtable :
+   `python3 -m robot.reliquat <sortie> <sortie>/*_fondateurs.jsonl`
+   → `reliquat_a_chercher.jsonl` (fiches « À chercher » des runs
+   précédents, champ `urls_exclues` = homonymes déjà écartés),
+   `reliquat_scrape.jsonl` (URL sans score, à re-scraper),
+   `reliquat_fondateurs.jsonl` et `contexte.jsonl` COMPLET (reliquat +
+   jour), prêt pour les étapes 5-6. Ne rien reconstruire à la main.
 
 3. **Recherche LinkedIn** (modèle). Principe général du pipeline : chaque
    étape reprend D'ABORD ce que la précédente n'a pas fini, en le lisant
-   dans Airtable. Ici : commencer par le reliquat des fiches encore
-   « À chercher » des runs précédents (récupérer rec_id, nom, âge, ville
-   et la dénomination de la société via la table Entreprises), puis
-   traiter les fondateurs du jour (`*_fondateurs.jsonl`). Pour chacun,
-   recherche web « "Prénom Nom" linkedin » (+ ville si besoin,
-   3 recherches max). Ne PAS exiger que la nouvelle société
-   figure sur le profil (elle vient d'être créée) ; valider par
-   localisation, âge estimé, plausibilité. Sémantique STRICTE des
-   statuts : « Trouvé » = candidat UNIQUE et cohérent, pas d'homonyme
-   plausible dans les résultats (quasi certain) ; « Ambigu » = plusieurs
-   candidats plausibles ou doute sérieux ; « Non trouvé » sinon. (C'est
-   ce statut, relu dans Airtable par le script de l'étape 5, qui décide
-   du contrôle d'identité — rien à reporter à la main.)
-   ⚠️ Pour une fiche « À chercher » avec Anomalie cochée : lire son
-   « Détail score » — il contient une ou des URLs d'homonymes déjà
-   écartés, à EXCLURE des candidats de la nouvelle recherche.
+   dans Airtable. Ici : commencer par `reliquat_a_chercher.jsonl`
+   (produit à l'étape 2 — le champ `urls_exclues` liste les homonymes
+   déjà écartés, à EXCLURE des candidats), puis traiter les fondateurs du
+   jour (`*_fondateurs.jsonl`). Pour chacun, recherche web
+   « "Prénom Nom" linkedin » (+ ville si besoin, 3 recherches max).
+   Ne PAS exiger que la nouvelle société figure sur le profil (elle
+   vient d'être créée). Sémantique des statuts (règle de Samuel) :
+   s'il n'y a qu'UN SEUL profil LinkedIn à ce nom dans les résultats
+   (pas d'homonyme, URLs exclues écartées) → « Trouvé » : une personne
+   unique à ce nom est forcément le fondateur, même sans confirmation de
+   ville ou de secteur. « Ambigu » = PLUSIEURS profils au même nom, ou
+   doute sur lequel est le bon (c'est le contrôle d'identité de l'étape 5
+   qui tranchera). « Non trouvé » sinon. (Le statut est relu dans
+   Airtable par le script de l'étape 5 — rien à reporter à la main.)
    Pas de relance des non-trouvés (sauf échec technique : une seule
    relance le lendemain). Écrire les résultats dans un JSON de
    cette forme exacte, puis `python3 -m robot.airtable maj tblBngzHytB48MiDK` :
@@ -130,21 +137,20 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    non-vérifié, 2e homonyme) restent cochées : ce sont des états
    terminaux ou des informations permanentes.
 
-4. **Scraping** (script en tâche de fond) : construire la file JSONL
-   (`{"rec_id", "url"}` par ligne) : d'abord le reliquat des runs
-   précédents (statut « Trouvé »/« Ambigu » avec URL mais sans score),
-   puis les profils du jour. Pour le reliquat, récupérer AU MÊME MOMENT
-   prénom, nom, âge et la dénomination de la société (table Entreprises,
-   via « SIREN cible ») et écrire un `reliquat_fondateurs.jsonl` au même
-   format que les `*_fondateurs.jsonl` — sans lui, la Note IA de ces
-   profils serait calculée sans nom ni société. Lancer EN TÂCHE DE FOND :
-   `python3 -m robot.scraping_lot file.jsonl resultats`
-   et pendant les ~45 minutes de scraping, faire le travail qui n'en
-   dépend pas : recherches LinkedIn restantes, étape 6a (`ref.json`), et
-   surtout **construire `contexte.jsonl`** = concaténation des
-   `*_fondateurs.jsonl` du jour + `reliquat_fondateurs.jsonl` — il est
-   REQUIS dès l'étape 5. Lire `resultats.jsonl` une seule fois à la fin
-   (`resultats.etat` donne l'avancement).
+4. **Scraping** (script en tâche de fond, EN DEUX VAGUES). La file JSONL
+   (`{"rec_id", "url"}` par ligne) part de `reliquat_scrape.jsonl`
+   (produit à l'étape 2) ; les URLs du jour s'y ajoutent au fil de
+   l'étape 3. Ne pas attendre la fin des recherches : **vague 1** dès que
+   le reliquat + ~15 premières URLs du jour sont prêts, lancer EN TÂCHE
+   DE FOND `python3 -m robot.scraping_lot file.jsonl resultats` et
+   poursuivre les recherches ; **vague 2** une fois toutes les recherches
+   faites, relancer la même commande avec le fichier complété et le MÊME
+   préfixe `resultats` — la reprise par rec_id saute ce qui est déjà
+   scrapé, c'est sûr par construction. Pendant le scraping, faire le
+   travail qui n'en dépend pas (recherches restantes, étape 6a
+   `ref.json` ; `contexte.jsonl` est déjà produit par robot.reliquat).
+   Lire `resultats.jsonl` une seule fois à la fin (`resultats.etat`
+   donne l'avancement).
    Plafond strict : 250 profils/jour (config.SCRAPE_DAILY_CAP —
    PhantomBuster annonce 1000-1500/jour sans risque, on garde une marge
    x4-6 car le compte LinkedIn est partagé), appliqué par le script. À
@@ -163,6 +169,11 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    (withResultObject=true) qui renvoie ~1000 tokens de logs par profil.
    ⚠️ `sleep` est bloqué par le harness : utiliser
    `python3 -c "import time; time.sleep(N)"` si besoin d'attendre.
+   ⚠️ Les commandes Bash basculent en tâche de fond au bout de 600 s :
+   ne jamais faire une longue attente bloquante — poller `resultats.etat`
+   par tranches de 5-8 minutes.
+   ⚠️ Ne jamais `cat` un gros JSON dans le contexte : le lire via un
+   script Python qui n'imprime qu'un résumé (comptes, échantillon).
 
 5. **Contrôle d'identité (anti-homonymes)** — les profils scrapés en
    statut « Ambigu », AVANT le scoring. La pire erreur du pipeline est
@@ -184,7 +195,7 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
 6. **Scoring déterministe** (tout scripté) :
    a. Lire la table Scoring UNE fois : `python3 -m robot.airtable lire
       tblHdqhFxJsxSLFeR ref.json fldvdr7IADGRDYyG6 fldYH2QUzs5ewKsap`.
-   b. Avec le `contexte.jsonl` déjà construit à l'étape 4 :
+   b. Avec le `contexte.jsonl` produit par robot.reliquat à l'étape 2 :
       `python3 -m robot.scorer_lot verif_ok.jsonl ref.json contexte.jsonl score`
       → `score_maj.json` (Score / Détail / Résumé / extrait JSON tronqué à
       2500 caractères, et « Non trouvé » + Anomalie pour les URLs mortes)
@@ -201,7 +212,9 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    court, ex. « Robot sourcing : N profils à examiner ») ET constituer le
    message final de la session. Structure : entonnoir (bruts → gardés →
    URLs → scrapés), coût Pappers + solde, profils à score ≥ 1 avec Note
-   IA et justification, anomalies — en NOMMANT les profils concernés
+   IA et justification — GROUPÉS PAR SOCIÉTÉ (un deal s'évalue par équipe
+   de cofondateurs, pas par personne) —, anomalies — en NOMMANT les
+   profils concernés
    (notamment les « non vérifiés » de l'étape 5, dont la fiche ne porte
    que le drapeau : le rapport est le seul endroit où le motif apparaît).
    Ne rien relancer ensuite.
