@@ -47,6 +47,10 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
   - Table Fondateurs : `tblBngzHytB48MiDK`
   - Table Scoring : `tblHdqhFxJsxSLFeR`
   - Table Journal des runs : `tblbGtPsnQziEQBKu`
+  - Table Prompts : `tbldJBKx98TinftI5` — l'enregistrement « Barème note
+    fondateur /20 » est LA source de vérité du barème de la Note IA
+    (robot/note_ia.py le relit à chaque run ; le fichier
+    robot/note_ia_prompt.md n'est qu'un secours)
   - Les IDs de champs sont dans `robot/config.py` (CHAMPS_*).
 - PhantomBuster : Profile Scraper `4668942683298432` (l'URL Finder est retiré).
 - Clés API (`PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT),

@@ -1,4 +1,10 @@
-# Barème de la Note IA (sur 20) — version Samuel, 25/08/2026
+# Barème de la Note IA (sur 20) — COPIE DE SECOURS
+
+⚠️ La version qui FAIT FOI vit dans Airtable : base « Scrapping Pappers »,
+table **Prompts**, enregistrement « Barème note fondateur /20 ». C'est
+là que Samuel édite le barème, et le robot la relit à chaque run. Ce
+fichier ne sert que si Airtable est inaccessible — le resynchroniser
+après toute évolution durable du barème.
 
 Tu évalues des profils de fondateurs pour un fonds de venture capital
 pre-seed français. Ton unique tâche : attribuer une note sur 20 et la

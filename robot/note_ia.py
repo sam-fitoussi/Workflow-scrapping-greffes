@@ -22,7 +22,7 @@ import sys
 import time
 import urllib.request
 
-from . import config
+from . import airtable, config
 
 CHAMPS_PROFIL = [
     "linkedinHeadline", "location", "companyName", "linkedinJobTitle",
@@ -44,10 +44,27 @@ CONSIGNES_FINALES = (
 
 
 def _bareme() -> str:
-    texte = (pathlib.Path(__file__).parent / "note_ia_prompt.md").read_text()
-    # La section « Règles d'exécution » est technique ; on garde l'éditorial
-    # et on ré-attache le garde-fou données + le format de sortie.
-    return texte.split("## Règles d'exécution")[0].strip() + "\n\n" + CONSIGNES_FINALES
+    """Le barème éditorial vit dans Airtable (table Prompts, enregistrement
+    « Barème note fondateur /20 ») : Samuel l'édite là-bas et c'est
+    répercuté au run suivant. Le fichier local n'est qu'un secours."""
+    texte = None
+    try:
+        cp = config.CHAMPS_PROMPTS
+        for r in airtable.lire_table(config.TABLE_PROMPTS, [cp["nom"], cp["contenu"]]):
+            if r["fields"].get(cp["nom"]) == config.NOM_PROMPT_BAREME:
+                texte = (r["fields"].get(cp["contenu"]) or "").strip() or None
+    except SystemExit:
+        pass
+    if texte:
+        print("Barème : version Airtable (table Prompts).")
+    else:
+        print("⚠️ Barème : table Prompts inaccessible ou vide — copie locale de "
+              "secours (robot/note_ia_prompt.md). À signaler dans le rapport.")
+        texte = (pathlib.Path(__file__).parent / "note_ia_prompt.md").read_text() \
+            .split("## Règles d'exécution")[0].strip()
+    # Les règles techniques (garde anti-injection, format JSON) sont ajoutées
+    # ici, pas dans le texte éditable.
+    return texte + "\n\n" + CONSIGNES_FINALES
 
 
 def noter(profil_ligne: dict, system: str) -> dict:

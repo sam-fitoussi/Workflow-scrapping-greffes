@@ -21,6 +21,16 @@ TABLE_ENTREPRISES = "tblxNwg1hpC3xbVgA"
 TABLE_FONDATEURS = "tblBngzHytB48MiDK"
 TABLE_SCORING = "tblHdqhFxJsxSLFeR"
 TABLE_JOURNAL = "tblbGtPsnQziEQBKu"
+TABLE_PROMPTS = "tbldJBKx98TinftI5"
+
+# Le barème de la Note IA vit dans Airtable (table Prompts), éditable par
+# Samuel sans toucher au code ; robot/note_ia_prompt.md n'est que la copie
+# de secours si Airtable est inaccessible.
+NOM_PROMPT_BAREME = "Barème note fondateur /20"
+CHAMPS_PROMPTS = {
+    "nom": "fldqy8DhVodTXOdPw",
+    "contenu": "fld41v3vTeviLavRW",
+}
 
 # IDs de champs (stables tant que les colonnes ne sont pas supprimées).
 # Les payloads REST utilisent ces IDs, jamais les noms.
