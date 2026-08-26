@@ -35,7 +35,9 @@ def scraper_profil(url_profil: str, timeout_s: int = 180) -> list[dict] | None:
 
     Un incident réseau transitoire (connection reset) coûte sinon un jour
     de délai au profil (aller-retour de reliquat) : on retente UNE fois
-    après 10 s avant de laisser l'erreur remonter."""
+    après 10 s avant de laisser l'erreur remonter. Si la coupure survient
+    pendant le polling, le retry relance un second container (deux visites
+    LinkedIn pour un profil) — accepté, la marge du plafond le couvre."""
     try:
         return _scraper_profil(url_profil, timeout_s)
     except TimeoutError:

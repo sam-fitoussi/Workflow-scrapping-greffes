@@ -202,8 +202,13 @@ def main() -> None:
             sauf = {d.strftime("%d-%m-%Y") for d in dates}
             # Profondeur : jusqu'à la plus ancienne date du Journal (les trous
             # entre deux dates traitées sont ainsi couverts), bornée à 7-14 j
-            jours = min(14, max(7, (dt.date.today() - min(dates)).days)) if dates else 7
+            brut = (dt.date.today() - min(dates)).days if dates else 7
+            jours = min(14, max(7, brut))
             print(f"--auto : {len(sauf)} dates du Journal exclues, profondeur {jours} jours")
+            if brut > 14:
+                print(f"⚠️ Fenêtre plafonnée à 14 jours alors que la plus ancienne date "
+                      f"du Journal remonte à {brut} jours : des dates plus anciennes ne "
+                      f"seront ni sondées ni rattrapées — le signaler dans le rapport.")
         print(json.dumps(sonder(jours, sauf), ensure_ascii=False, indent=1))
         return
 

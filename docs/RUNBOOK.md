@@ -96,7 +96,9 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    et `date_source` — ne pas perdre ce tag, c'est lui qui permet la
    ventilation par journée).
    Puis reconstruire le travail en attente depuis Airtable :
-   `python3 -m robot.reliquat <sortie> <sortie>/*_fondateurs.jsonl`
+   `python3 -m robot.reliquat <sortie>`
+   (le script trouve lui-même les fichiers du jour dans <sortie> — motif
+   daté — et fonctionne aussi un jour sans aucune date cible)
    → `reliquat_a_chercher.jsonl` (fiches « À chercher » des runs
    précédents, champ `urls_exclues` = homonymes déjà écartés),
    `reliquat_scrape.jsonl` (URL sans score, à re-scraper),

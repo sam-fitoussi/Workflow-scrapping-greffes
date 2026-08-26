@@ -14,11 +14,15 @@ sans aucune jointure ni parsing à la main :
   contexte.jsonl             reliquat_fondateurs + les fichiers du jour
                              passés en argument — prêt pour les étapes 5-6
 
-Les fichiers du jour passés en argument servent aussi d'exclusion : une
-fiche insérée par run.py aujourd'hui est encore « À chercher » mais n'est
-pas un reliquat.
+Les fichiers du jour (motif daté `JJ-MM-AAAA_fondateurs.jsonl`, trouvés
+AUTOMATIQUEMENT dans <sortie_dir>) servent aussi d'exclusion : une fiche
+insérée par run.py aujourd'hui est encore « À chercher » mais n'est pas
+un reliquat. Le motif daté évite que `reliquat_fondateurs.jsonl` lui-même
+soit pris pour un fichier du jour lors d'une seconde invocation, et un
+jour sans date cible (zéro fichier) fonctionne normalement.
 
 Usage : python3 -m robot.reliquat <sortie_dir> [fondateurs_jour.jsonl ...]
+        (les fichiers explicites remplacent la détection automatique)
 """
 
 import json
@@ -35,6 +39,9 @@ CE = config.CHAMPS_ENTREPRISES
 def main(sortie_dir: str, fichiers_jour: list[str]) -> None:
     sortie = pathlib.Path(sortie_dir)
     sortie.mkdir(parents=True, exist_ok=True)
+    if not fichiers_jour:  # détection automatique, motif daté uniquement
+        fichiers_jour = sorted(str(p) for p in sortie.glob("[0-9]*-[0-9]*-[0-9]*_fondateurs.jsonl"))
+        print(f"Fichiers du jour détectés : {len(fichiers_jour)}")
 
     ids_jour = set()
     lignes_jour = []
@@ -81,11 +88,16 @@ def main(sortie_dir: str, fichiers_jour: list[str]) -> None:
     ecrire("reliquat_a_chercher.jsonl", a_chercher)
     ecrire("reliquat_scrape.jsonl", a_scraper)
     ecrire("reliquat_fondateurs.jsonl", ctx_reliquat)
-    ecrire("contexte.jsonl", ctx_reliquat + lignes_jour)
+    # contexte.jsonl inclut AUSSI les « À chercher » : re-cherchés puis
+    # scrapés dans le même run, ils arrivent au contrôle d'identité et à
+    # la Note IA — sans leur contexte, le juge recevrait un greffe vide
+    ctx_a_chercher = [{k: v for k, v in x.items() if k != "urls_exclues"}
+                      for x in a_chercher]
+    contexte = ctx_reliquat + ctx_a_chercher + lignes_jour
+    ecrire("contexte.jsonl", contexte)
     print(f"Reliquat : {len(a_chercher)} à re-chercher "
           f"(dont {sum(1 for x in a_chercher if x['urls_exclues'])} avec URLs à exclure), "
-          f"{len(a_scraper)} à re-scraper. contexte.jsonl : "
-          f"{len(ctx_reliquat) + len(lignes_jour)} lignes.")
+          f"{len(a_scraper)} à re-scraper. contexte.jsonl : {len(contexte)} lignes.")
 
 
 if __name__ == "__main__":
