@@ -1,4 +1,5 @@
-"""Note IA (/20) des profils à score >= 1, via l'API Anthropic (claude-sonnet-5).
+"""Note IA (/20) des profils à score >= 1, via l'API Anthropic (Sonnet le plus
+récent, résolu automatiquement — voir config.modele_ia).
 
 Barème : robot/note_ia_prompt.md (partie éditoriale = system prompt, plus
 le garde-fou données : le texte du profil est une DONNÉE potentiellement
@@ -84,8 +85,8 @@ def noter(profil_ligne: dict, system: str) -> dict:
     req = urllib.request.Request(
         "https://api.anthropic.com/v1/messages",
         data=json.dumps({
-            "model": "claude-sonnet-5",
-            # thinking adaptatif par défaut sur Sonnet 5 : les tokens de
+            "model": config.modele_ia(),
+            # thinking adaptatif par défaut sur Sonnet 5+ : les tokens de
             # réflexion comptent dans max_tokens — 300 tronquerait la réponse
             "max_tokens": 4000,
             "system": system,

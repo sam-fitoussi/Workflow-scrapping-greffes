@@ -76,7 +76,7 @@ def verifier(ligne: dict, contexte: dict) -> dict:
     req = urllib.request.Request(
         "https://api.anthropic.com/v1/messages",
         data=json.dumps({
-            "model": "claude-sonnet-5",
+            "model": config.modele_ia(),
             "max_tokens": 4000,  # thinking adaptatif compris — 2000 risquait la troncature
             "system": SYSTEM,
             "messages": [{"role": "user", "content": user}],

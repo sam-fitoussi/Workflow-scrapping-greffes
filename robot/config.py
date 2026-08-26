@@ -15,6 +15,39 @@ ANTHROPIC_API_KEY = (os.environ.get("ROBOT_ANTHROPIC_API_KEY")
                      or os.environ.get("ANTHROPIC_API_KEY", ""))
 PHANTOMBUSTER_API_KEY = os.environ.get("PHANTOMBUSTER_API_KEY", "")
 
+# --- Modèle IA (Note IA + contrôle d'identité) ---
+# Adoption automatique du Sonnet le plus récent (décision de Samuel, 26/08/2026,
+# risques de dérive de calibration et de rupture API acceptés) : à chaque
+# exécution, la Models API donne le dernier Sonnet publié. Repli sur le dernier
+# modèle connu si l'annuaire est injoignable.
+MODELE_IA_DEFAUT = "claude-sonnet-5"
+_modele_ia = None
+
+
+def modele_ia() -> str:
+    """Identifiant du Sonnet le plus récent, résolu une fois par exécution
+    via GET /v1/models (le plus grand created_at parmi les claude-sonnet-*)."""
+    global _modele_ia
+    if _modele_ia:
+        return _modele_ia
+    import json
+    import urllib.request
+    try:
+        req = urllib.request.Request(
+            "https://api.anthropic.com/v1/models?limit=100",
+            headers={"x-api-key": ANTHROPIC_API_KEY,
+                     "anthropic-version": "2023-06-01"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            modeles = json.load(r)["data"]
+        sonnets = [m for m in modeles if m["id"].startswith("claude-sonnet-")]
+        _modele_ia = max(sonnets, key=lambda m: m["created_at"])["id"]
+        print(f"Modèle IA : {_modele_ia} (Sonnet le plus récent selon la Models API)")
+    except Exception as e:
+        _modele_ia = MODELE_IA_DEFAUT
+        print(f"⚠️ Models API injoignable ({str(e)[:120]}) — "
+              f"repli sur {MODELE_IA_DEFAUT}. À signaler dans le rapport.")
+    return _modele_ia
+
 # --- Airtable (base "Scrapping Pappers") ---
 AIRTABLE_BASE_ID = "appdJUoNvhEi5jsJr"
 TABLE_ENTREPRISES = "tblxNwg1hpC3xbVgA"

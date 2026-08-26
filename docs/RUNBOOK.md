@@ -221,7 +221,10 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    c. Pousser : `python3 -m robot.airtable maj tblBngzHytB48MiDK score_maj.json`.
 
 7. **Note IA** : `python3 -m robot.note_ia score_a_noter.jsonl notes`
-   (barème `robot/note_ia_prompt.md`, claude-sonnet-5, notation DURE ;
+   (barème `robot/note_ia_prompt.md`, modèle = Sonnet le plus récent résolu
+   automatiquement par `config.modele_ia` — le nom du modèle utilisé
+   s'affiche au lancement et doit figurer dans le rapport s'il a changé
+   depuis la veille, la calibration des notes pouvant bouger ; notation DURE ;
    reprise automatique si relancé) → pousser `notes_maj.json` via
    `python3 -m robot.airtable maj tblBngzHytB48MiDK notes_maj.json`.
 
