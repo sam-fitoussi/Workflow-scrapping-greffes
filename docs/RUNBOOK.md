@@ -115,11 +115,21 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    Ne PAS exiger que la nouvelle société figure sur le profil (elle
    vient d'être créée). Sémantique des statuts (règle de Samuel) :
    s'il n'y a qu'UN SEUL profil LinkedIn à ce nom dans les résultats
-   (pas d'homonyme, URLs exclues écartées) → « Trouvé » : une personne
-   unique à ce nom est forcément le fondateur, même sans confirmation de
-   ville ou de secteur. « Ambigu » = PLUSIEURS profils au même nom, ou
-   doute sur lequel est le bon (c'est le contrôle d'identité de l'étape 5
-   qui tranchera). « Non trouvé » sinon. (Le statut est relu dans
+   (pas d'homonyme, URLs exclues écartées) → « Trouvé » par défaut : une
+   personne unique à ce nom est très probablement le fondateur, sans
+   exiger de confirmation de ville ou de secteur. UNE seule exception,
+   la CONTRADICTION FLAGRANTE : si le profil unique dément frontalement
+   la fiche — âge impossible, ou secteur ET géographie tous deux
+   incompatibles (ex. : médecin hospitalier à Marseille pour une société
+   de logiciels à Paris) → « Ambigu », le contrôle de l'étape 5 tranche
+   pour un centime. La rareté du nom ne dispense PAS de cette exception :
+   LinkedIn n'indexe pas tous les profils, « un seul résultat » signifie
+   « un seul profil indexé », pas « une seule personne » — et le fondateur
+   en stealth qui ne touche pas son LinkedIn est justement celui dont le
+   seul profil visible peut être un homonyme. Un doute léger SANS
+   contradiction flagrante reste « Trouvé ». « Ambigu » aussi quand
+   PLUSIEURS profils au même nom se disputent la fiche. « Non trouvé »
+   sinon. (Le statut est relu dans
    Airtable par le script de l'étape 5 — rien à reporter à la main.)
    Pas de relance des non-trouvés (sauf échec technique : une seule
    relance le lendemain). Écrire les résultats dans un JSON de
