@@ -119,10 +119,12 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    personne unique à ce nom est très probablement le fondateur, sans
    exiger de confirmation de ville ou de secteur. UNE seule exception,
    la CONTRADICTION FLAGRANTE : si le profil unique dément frontalement
-   la fiche — âge impossible, ou secteur ET géographie tous deux
-   incompatibles (ex. : médecin hospitalier à Marseille pour une société
-   de logiciels à Paris) → « Ambigu », le contrôle de l'étape 5 tranche
-   pour un centime. La rareté du nom ne dispense PAS de cette exception :
+   la fiche — âge impossible, OU secteur frontalement sans rapport
+   (ex. : étudiant en métiers d'art pour une société de programmation,
+   coiffeur pour une biotech). La géographie ne compte qu'EN RENFORT
+   d'un autre signal, jamais seule (un fondateur vit souvent ailleurs
+   que le siège). Dans ces cas → « Ambigu », le contrôle de l'étape 5
+   tranche pour un centime. La rareté du nom ne dispense PAS de cette exception :
    LinkedIn n'indexe pas tous les profils, « un seul résultat » signifie
    « un seul profil indexé », pas « une seule personne » — et le fondateur
    en stealth qui ne touche pas son LinkedIn est justement celui dont le
