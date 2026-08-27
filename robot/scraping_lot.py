@@ -27,7 +27,7 @@ import sys
 import time
 
 from . import config, phantoms
-from .note_ia import CHAMPS_PROFIL
+from .config import CHAMPS_PROFIL
 
 
 def _rec_ids_deja_traites(prefixe_sortie: str) -> set[str]:

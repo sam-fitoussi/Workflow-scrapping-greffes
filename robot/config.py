@@ -115,6 +115,18 @@ CHAMPS_JOURNAL = {
     "notes": "fldIUKYqke6xnHAX4",
 }
 
+# Champs utiles d'un profil LinkedIn scrapé (PhantomBuster) — partagés par
+# le scraping (détection des scrapes vides), le contrôle d'identité et la
+# Note IA (extrait compact envoyé aux modèles).
+CHAMPS_PROFIL = [
+    "linkedinHeadline", "location", "companyName", "linkedinJobTitle",
+    "linkedinJobDateRange", "previousCompanyName", "linkedinPreviousJobTitle",
+    "linkedinPreviousJobDateRange", "linkedinSchoolName", "linkedinSchoolDegree",
+    "linkedinSchoolDateRange", "linkedinPreviousSchoolName",
+    "linkedinPreviousSchoolDegree", "linkedinDescription",
+    "linkedinFollowersCount", "linkedinConnectionsCount",
+]
+
 # --- PhantomBuster (agents existants du compte) ---
 PHANTOM_URL_FINDER_ID = "6409925669476364"   # Deal Flow - Linkedin Profile URL Finder
 PHANTOM_SCRAPER_ID = "4668942683298432"      # Deal Flow - Linkedin Profile Scraper

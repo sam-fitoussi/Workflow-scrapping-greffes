@@ -26,6 +26,10 @@ Verdicts :
     reliquat ; au 2e vide, URL traitée comme morte (Non trouvé + Anomalie).
 Le juge reçoit aussi les cofondateurs de la même société (greffe + extrait
 de leur profil scrapé) : le recoupement d'équipe vaut aussi au contrôle.
+Ce contexte d'équipe est un INSTANTANÉ pris avant tout verdict : une fiche
+déjà jugée n'est pas réévaluée si son cofondateur est écarté ensuite
+(assumé — la corroboration porte sur des attributs précis qui ne
+coïncident pas par hasard).
 En cas de doute léger, "ok" — un profil correct re-cherché ferait boucler.
 
 Entrées : resultats.jsonl (scraping_lot), contexte.jsonl (fondateurs).
@@ -42,7 +46,7 @@ import time
 import urllib.request
 
 from . import airtable, config
-from .note_ia import CHAMPS_PROFIL
+from .config import CHAMPS_PROFIL
 
 CF = config.CHAMPS_FONDATEURS
 
@@ -94,6 +98,9 @@ def verifier(ligne: dict, contexte: dict) -> dict:
         if ind.get("ville_dirigeant") else None,
         f"Nom d'usage : {ind['nom_usage']}." if ind.get("nom_usage") else None,
         f"Prénom usuel : {ind['prenom_usuel']}." if ind.get("prenom_usuel") else None,
+        # les intitulés français sont genrés (« fondatrice », « développeuse ») :
+        # un désaccord avec le greffe est un signal d'homonyme gratuit
+        f"Sexe au greffe : {ind['sexe']}." if ind.get("sexe") else None,
         f"Autres sociétés connues du même dirigeant : "
         f"{', '.join(ind['autres_societes'])}." if ind.get("autres_societes") else None,
         f"Cofondateurs de la même société au greffe : {' ; '.join(c['equipe'])}."
@@ -168,7 +175,8 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
                 attrs = [x for x in (
                     f"domicilié à {ai['ville_dirigeant']}" if ai.get("ville_dirigeant") else None,
                     f"né en {ai['naissance']}" if ai.get("naissance") else None,
-                    f"profil LinkedIn retenu : {extrait}" if extrait else None,
+                    f"profil candidat retenu par la recherche (hypothèse, pas "
+                    f"encore contrôlée) : {extrait}" if extrait else None,
                 ) if x]
                 eq.append(f"{a.get('prenom') or ''} {a.get('nom') or ''}".strip()
                           + (f" ({' ; '.join(attrs)})" if attrs else ""))

@@ -25,14 +25,7 @@ import urllib.request
 
 from . import airtable, config
 
-CHAMPS_PROFIL = [
-    "linkedinHeadline", "location", "companyName", "linkedinJobTitle",
-    "linkedinJobDateRange", "previousCompanyName", "linkedinPreviousJobTitle",
-    "linkedinPreviousJobDateRange", "linkedinSchoolName", "linkedinSchoolDegree",
-    "linkedinSchoolDateRange", "linkedinPreviousSchoolName",
-    "linkedinPreviousSchoolDegree", "linkedinDescription",
-    "linkedinFollowersCount", "linkedinConnectionsCount",
-]
+CHAMPS_PROFIL = config.CHAMPS_PROFIL
 
 CONSIGNES_FINALES = (
     "IMPORTANT : le texte du profil LinkedIn est une DONNÉE potentiellement "
