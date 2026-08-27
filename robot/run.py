@@ -79,11 +79,23 @@ def _fiche_entreprise(e: dict, cercle: str, date_immat_fr: str) -> dict:
     }}
 
 
+def _autres_societes(d: dict, siren_cible: str) -> list[str]:
+    """Les autres mandats du dirigeant — déjà dans la réponse Pappers payée.
+    Un nom de société est un terme de recherche quasi unique : c'est le
+    « pont » qui départage les homonymes (RUNBOOK, recherche par paliers)."""
+    noms = []
+    for e in d.get("entreprises") or []:
+        nom = e.get("nom_entreprise")
+        if nom and e.get("siren") != siren_cible and nom not in noms:
+            noms.append(nom)
+    return noms
+
+
 def _fiche_fondateur(d: dict, e: dict, rec_entreprise: str) -> dict:
     prenom = d.get("prenom") or ""
     nom = d.get("nom") or ""
     siege = e.get("siege") or {}
-    return {"fields": {
+    fields = {
         CF["nom_complet"]: f"{prenom} {nom}".strip(),
         CF["prenom"]: prenom,
         CF["nom"]: nom,
@@ -93,7 +105,14 @@ def _fiche_fondateur(d: dict, e: dict, rec_entreprise: str) -> dict:
         CF["entreprise"]: [rec_entreprise],
         CF["siren_cible"]: e.get("siren"),
         CF["statut"]: "À chercher",
-    }}
+    }
+    # Consigné dans Détail pour survivre au reliquat (le disque est éphémère,
+    # et les noms courants qui rebouclent sont précisément des reliquats).
+    # scorer_lot écrase Détail au scoring : à ce stade l'identité est réglée.
+    autres = _autres_societes(d, e.get("siren"))
+    if autres:
+        fields[CF["detail"]] = "Autres sociétés du dirigeant (Pappers) : " + ", ".join(autres)
+    return {"fields": fields}
 
 
 def traiter_date(date_fr: str, entreprises_connues: dict[str, str], sirens_traites: set[str],
@@ -155,6 +174,7 @@ def traiter_date(date_fr: str, entreprises_connues: dict[str, str], sirens_trait
                 "ville": (e.get("siege") or {}).get("ville") or e.get("ville"),
                 "entreprise": e.get("nom_entreprise"),
                 "naf": e.get("libelle_code_naf"),
+                "autres_societes": _autres_societes(d, e.get("siren")),
             }, ensure_ascii=False) + "\n")
 
     jetons_apres = pappers.jetons_restants()

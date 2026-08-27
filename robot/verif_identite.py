@@ -1,15 +1,16 @@
-"""Contrôle d'identité des profils scrapés « Ambigu », AVANT scoring.
+"""Contrôle d'identité de TOUS les profils scrapés, AVANT scoring.
 
 Pourquoi : un homonyme scrapé à la place du bon fondateur prendrait Score 0
 et serait marqué « traité » — le vrai profil (peut-être excellent) serait
 enterré définitivement. Le faux négatif est l'erreur la plus chère du
 pipeline.
 
-Périmètre : le script relit LUI-MÊME la colonne « Statut LinkedIn » dans
-Airtable (aucun contrat de données tenu à la main par le modèle). Seuls les
-« Ambigu » sont contrôlés : un candidat unique et cohérent (« Trouvé ») est
-quasi certainement le bon et passe directement. Sans PAT Airtable, tout est
-contrôlé (défaut prudent). ~10-15 appels Sonnet par jour.
+Périmètre : tous les profils scrapés, « Trouvé » compris (décision du
+27/08 : au moment du « Trouvé » on n'a que des extraits de recherche ;
+après scraping on a les dates réelles, et un « Trouvé » erroné passait
+sans aucun contrôle — cas Martin Duvanel). Le script relit LUI-MÊME la
+colonne « Détail score » dans Airtable pour l'historique d'exclusions
+(anti-boucle). ~30-40 appels Sonnet par jour, quelques centimes.
 
 Verdicts :
   - "ok"      → le profil passe au scoring (<sortie>_ok.jsonl) ;
@@ -66,11 +67,14 @@ def verifier(ligne: dict, contexte: dict) -> dict:
     p = ligne["profil"]
     compact = {k: p.get(k) for k in CHAMPS_PROFIL if p.get(k) is not None}
     c = contexte.get(ligne["rec_id"], {})
+    autres = c.get("autres_societes") or []
     user = (
         f"Dirigeant selon le greffe : {c.get('prenom') or ''} {c.get('nom') or ''}, "
         f"{c.get('age') or 'âge inconnu'}, société {c.get('entreprise')} "
-        f"({c.get('naf') or 'activité inconnue'}), siège à {c.get('ville') or '?'}.\n\n"
-        f"Profil LinkedIn scrapé ({ligne.get('url')}) :\n"
+        f"({c.get('naf') or 'activité inconnue'}), siège à {c.get('ville') or '?'}."
+        + (f"\nAutres sociétés connues du même dirigeant (greffe) : {', '.join(autres)}."
+           if autres else "")
+        + f"\n\nProfil LinkedIn scrapé ({ligne.get('url')}) :\n"
         f"{json.dumps(compact, ensure_ascii=False)}"
     )
     req = urllib.request.Request(
@@ -107,15 +111,14 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
             c = json.loads(l)
             contexte[c["rec_id"]] = c
 
-    # Statut + Détail relus directement dans Airtable : le raccourci « Trouvé »
-    # et le compteur d'homonymes ne dépendent d'aucune clé posée à la main.
+    # Détail relu directement dans Airtable : le compteur d'homonymes écartés
+    # (anti-boucle) ne dépend d'aucune clé posée à la main.
     try:
         fiches = {r["id"]: r["fields"]
-                  for r in airtable.lire_table(config.TABLE_FONDATEURS,
-                                               [CF["statut"], CF["detail"]])}
+                  for r in airtable.lire_table(config.TABLE_FONDATEURS, [CF["detail"]])}
     except SystemExit as e:
-        print(f"⚠️ Statuts Airtable illisibles ({e}) : contrôle de TOUS les profils, "
-              f"SANS historique d'exclusions (une fiche au 2e homonyme peut reboucler). "
+        print(f"⚠️ Détails Airtable illisibles ({e}) : contrôle SANS historique "
+              f"d'exclusions (une fiche au 2e homonyme peut reboucler). "
               f"À signaler dans le rapport.")
         fiches = {}
 
@@ -125,16 +128,12 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
     except FileNotFoundError:
         verdicts = {}
 
-    passes_sans_controle = 0
     with open(f_verdicts, "a") as out:
         for l in open(f_resultats):
             if not l.strip():
                 continue
             ligne = json.loads(l)
             if ligne["statut"] != "ok" or ligne["rec_id"] in verdicts:
-                continue
-            if fiches.get(ligne["rec_id"], {}).get(CF["statut"]) == "Trouvé":
-                passes_sans_controle += 1  # candidat unique et cohérent : quasi sûr
                 continue
             try:
                 v = verifier(ligne, contexte)
@@ -182,7 +181,7 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
                         CF["anomalie"]: True,
                         CF["detail"]: message,
                     }})
-            else:  # « Trouvé » non contrôlés, contrôlés ok, morts et erreurs : scorer_lot gère
+            else:  # contrôlés ok, morts et erreurs : scorer_lot gère
                 if v and v.get("non_verifie"):
                     maj.append({"id": ligne["rec_id"], "fields": {CF["anomalie"]: True}})
                 ok_out.write(json.dumps(ligne, ensure_ascii=False) + "\n")
@@ -192,8 +191,8 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
                if v["verdict"] == "ok" and not v.get("non_verifie"))
     n_nv = sum(1 for v in verdicts.values() if v.get("non_verifie"))
     n_mauvais = sum(1 for v in verdicts.values() if v["verdict"] == "mauvais")
-    print(f"{passes_sans_controle} « Trouvé » non contrôlés, {n_ok} Ambigus confirmés, "
-          f"{n_mauvais} homonymes écartés, {n_nv} non vérifiés (Anomalie cochée).")
+    print(f"{n_ok} profils confirmés, {n_mauvais} homonymes écartés, "
+          f"{n_nv} non vérifiés (Anomalie cochée).")
 
 
 if __name__ == "__main__":

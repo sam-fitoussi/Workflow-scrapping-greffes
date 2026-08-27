@@ -69,11 +69,17 @@ def main(sortie_dir: str, fichiers_jour: list[str]) -> None:
         f = r["fields"]
         statut = f.get(CF["statut"])
         e = par_siren.get(f.get(CF["siren_cible"]), {})
+        detail = f.get(CF["detail"]) or ""
+        # Autres mandats consignés dans Détail par run.py à l'insertion :
+        # le « pont » de recherche des homonymes (RUNBOOK, paliers)
+        m = re.search(r"Autres sociétés du dirigeant \(Pappers\) : ([^|]+)", detail)
+        autres = [s.strip() for s in m.group(1).split(",") if s.strip()] if m else []
         base = {"rec_id": r["id"], "prenom": f.get(CF["prenom"]), "nom": f.get(CF["nom"]),
                 "age": f.get(CF["age"]), "ville": f.get(CF["ville"]),
-                "entreprise": e.get(CE["denomination"]), "naf": e.get(CE["libelle_naf"])}
+                "entreprise": e.get(CE["denomination"]), "naf": e.get(CE["libelle_naf"]),
+                "autres_societes": autres}
         if statut == "À chercher":
-            urls = re.findall(r"https?://[^\s)|]+", f.get(CF["detail"]) or "")
+            urls = re.findall(r"https?://[^\s)|]+", detail)
             a_chercher.append(base | {"urls_exclues": urls})
         elif statut in ("Trouvé", "Ambigu") and f.get(CF["linkedin_url"]) \
                 and f.get(CF["score"]) is None:  # Score rempli (même 0) = déjà traité

@@ -114,10 +114,43 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    dans Airtable. Ici : commencer par `reliquat_a_chercher.jsonl`
    (produit à l'étape 2 — le champ `urls_exclues` liste les homonymes
    déjà écartés, à EXCLURE des candidats), puis traiter les fondateurs du
-   jour (`*_fondateurs.jsonl`). Pour chacun, recherche web
-   « "Prénom Nom" linkedin » (+ ville si besoin, 3 recherches max).
+   jour (`*_fondateurs.jsonl`). Chaque ligne porte `autres_societes` :
+   les autres mandats du dirigeant, déjà payés dans le tirage Pappers —
+   le meilleur « pont » de recherche pour les noms courants.
+   Enquête PAR PALIERS, du gratuit vers le payant :
+   - **Palier 1** (tous) : recherche web « "Prénom Nom" linkedin »
+     RESTREINTE aux domaines LinkedIn (paramètre `allowed_domains` de
+     WebSearch) — élimine le bruit hors sujet (homonymes américains,
+     Wikipédia). Cette restriction ne vaut QUE pour cette requête de
+     listage des candidats : l'enquête de DÉPARTAGE (paliers suivants)
+     est libre — presse, site de la société, pages équipe, annuaires,
+     tout est bon.
+   - **Palier 2** (si 0 candidat, ou plusieurs sans discriminant) :
+     recherche par NOM DE SOCIÉTÉ (beaucoup de SAS sont immatriculées
+     après le lancement du produit : la boîte est parfois déjà sur le
+     profil) ; « "Prénom Nom" "<autre société>" » avec chaque nom de
+     `autres_societes` (un nom de société est un terme quasi unique).
+     Et surtout : RECOUPER ENTRE COFONDATEURS de la même entreprise —
+     un employeur, une école ou une société commune à deux profils
+     candidats verrouille les deux identités d'un coup. C'est le signal
+     le plus puissant du pipeline, l'appliquer systématiquement dès
+     qu'une fiche a des cofondateurs.
+   - **Palier 3, dernier recours payant** (1 jeton Pappers ≈ 1/7 du
+     coût d'une journée de tirage) : l'objet social en texte intégral
+     via `https://api.pappers.fr/v2/entreprise?api_token=…&siren=…`
+     (champ `objet_social`). SEULEMENT si les trois conditions sont
+     réunies : (a) les paliers gratuits n'ont pas départagé ; (b) la
+     fiche a l'air de valoir l'investissement — signaux d'excellent
+     fondateur sur un des candidats, ou vraie startup finançable
+     (équipe de ≥ 2 cofondateurs, NAF du cercle cœur, capital
+     significatif) ; (c) une chance réelle que l'objet social
+     discrimine (ex. : candidats aux secteurs différents). Au plus
+     5 appels par run, et le rapport mentionne combien ont été
+     consommés. Un fondateur unique de 40 ans dans une SASU au nom de
+     freelance ne mérite pas ce palier ; une équipe deeptech, si.
    Ne PAS exiger que la nouvelle société figure sur le profil (elle
-   vient d'être créée). Sémantique des statuts (règle de Samuel) :
+   vient d'être créée) — mais la CHERCHER est permis et souvent payant.
+   Sémantique des statuts (règle de Samuel) :
    s'il n'y a qu'UN SEUL profil LinkedIn à ce nom dans les résultats
    (pas d'homonyme, URLs exclues écartées) → « Trouvé » par défaut : une
    personne unique à ce nom est très probablement le fondateur, sans
@@ -133,10 +166,14 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    « un seul profil indexé », pas « une seule personne » — et le fondateur
    en stealth qui ne touche pas son LinkedIn est justement celui dont le
    seul profil visible peut être un homonyme. Un doute léger SANS
-   contradiction flagrante reste « Trouvé ». « Ambigu » aussi quand
-   PLUSIEURS profils au même nom se disputent la fiche. « Non trouvé »
-   sinon. (Le statut est relu dans
-   Airtable par le script de l'étape 5 — rien à reporter à la main.)
+   contradiction flagrante reste « Trouvé ». PLUSIEURS candidats après
+   enquête : « Ambigu » = il reste AU MOINS UN candidat PLAUSIBLE qu'on
+   n'arrive pas à départager (mettre l'URL du plus plausible — le
+   contrôle de l'étape 5 tranche). Si AUCUN candidat n'est plausible
+   (nom très courant, rien qui colle), c'est « Non trouvé » : désigner
+   un candidat au hasard coûte un scrape puis une exclusion, et fait
+   reboucler la fiche jusqu'au 2e homonyme pour rien. « Non trouvé »
+   aussi quand la recherche ne donne rien.
    Pas de relance des non-trouvés (sauf échec technique : une seule
    relance le lendemain). Écrire les résultats dans un JSON de
    cette forme exacte, puis `python3 -m robot.airtable maj tblBngzHytB48MiDK` :
@@ -193,13 +230,14 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    ⚠️ Ne jamais `cat` un gros JSON dans le contexte : le lire via un
    script Python qui n'imprime qu'un résumé (comptes, échantillon).
 
-5. **Contrôle d'identité (anti-homonymes)** — les profils scrapés en
-   statut « Ambigu », AVANT le scoring. La pire erreur du pipeline est
+5. **Contrôle d'identité (anti-homonymes)** — TOUS les profils scrapés,
+   « Trouvé » compris, AVANT le scoring. La pire erreur du pipeline est
    l'homonyme : un mauvais profil prendrait Score 0 et enterrerait
-   définitivement le vrai fondateur (peut-être excellent). Le script
-   relit lui-même les statuts dans Airtable : les « Trouvé » (candidat
-   unique et cohérent) passent directement — quasi sûrs, pas de temps à
-   perdre à les re-confronter au greffe. ~10-15 appels Sonnet/jour.
+   définitivement le vrai fondateur (peut-être excellent). Les
+   « Trouvé » ne sont plus exemptés (décision du 27/08) : au moment du
+   « Trouvé » on n'a que des extraits de recherche ; le scraping
+   apporte les dates réelles, et un « Trouvé » erroné passait sans
+   aucun filet. ~30-40 appels Sonnet/jour, quelques centimes.
    `python3 -m robot.verif_identite resultats.jsonl contexte.jsonl verif`
    → `verif_ok.jsonl` (profils confirmés, entrée de l'étape 6) et
    `verif_maj.json` à pousser via
@@ -222,9 +260,9 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
 
 7. **Note IA** : `python3 -m robot.note_ia score_a_noter.jsonl notes`
    (barème `robot/note_ia_prompt.md`, modèle = Sonnet le plus récent résolu
-   automatiquement par `config.modele_ia` — le nom du modèle utilisé
-   s'affiche au lancement et doit figurer dans le rapport s'il a changé
-   depuis la veille, la calibration des notes pouvant bouger ; notation DURE ;
+   automatiquement par `config.modele_ia` — rien à signaler à ce sujet,
+   SAUF le repli sur le modèle par défaut marqué ⚠️ au lancement, qui
+   est un mode dégradé à mentionner dans le rapport ; notation DURE ;
    reprise automatique si relancé) → pousser `notes_maj.json` via
    `python3 -m robot.airtable maj tblBngzHytB48MiDK notes_maj.json`.
 
