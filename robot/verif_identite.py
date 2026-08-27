@@ -21,6 +21,11 @@ Verdicts :
   - vérification indisponible (API en panne) → le profil passe quand même
     (on ne bloque pas le pipeline) mais Anomalie est cochée : le trou est
     visible, jamais silencieux.
+  - statut "vide" (scrape sans aucun champ utile) → jamais scoré : marqueur
+    « Scrape vide » dans Détail et re-scrape au run suivant via le
+    reliquat ; au 2e vide, URL traitée comme morte (Non trouvé + Anomalie).
+Le juge reçoit aussi les cofondateurs de la même société (greffe + extrait
+de leur profil scrapé) : le recoupement d'équipe vaut aussi au contrôle.
 En cas de doute léger, "ok" — un profil correct re-cherché ferait boucler.
 
 Entrées : resultats.jsonl (scraping_lot), contexte.jsonl (fondateurs).
@@ -54,7 +59,10 @@ l'âge ou le mois de naissance (cohérents avec les dates d'études et de postes
 ville PERSONNELLE du dirigeant si fournie (son domicile déclaré au greffe : une \
 concordance avec le profil est une confirmation FORTE — mais une différence n'est \
 pas disqualifiante seule, les gens déménagent) ; les autres sociétés connues du \
-dirigeant (si le profil en mentionne une, c'est une confirmation quasi certaine).
+dirigeant (si le profil en mentionne une, c'est une confirmation quasi certaine) ; \
+les COFONDATEURS de la même société s'ils sont fournis : un recoupement entre le \
+profil examiné et un cofondateur (même employeur, même école, communes proches, \
+même société rare) est une corroboration forte de l'identité.
 
 Réponds "mauvais" UNIQUEMENT si l'incompatibilité d'identité est nette :
 - âge ou naissance impossibles au vu des dates du profil ; OU
@@ -88,6 +96,8 @@ def verifier(ligne: dict, contexte: dict) -> dict:
         f"Prénom usuel : {ind['prenom_usuel']}." if ind.get("prenom_usuel") else None,
         f"Autres sociétés connues du même dirigeant : "
         f"{', '.join(ind['autres_societes'])}." if ind.get("autres_societes") else None,
+        f"Cofondateurs de la même société au greffe : {' ; '.join(c['equipe'])}."
+        if c.get("equipe") else None,
     ) if t]
     user = (
         f"Dirigeant selon le greffe : {c.get('prenom') or ''} {c.get('nom') or ''}, "
@@ -130,6 +140,39 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
         if l.strip():
             c = json.loads(l)
             contexte[c["rec_id"]] = c
+    resultats = [json.loads(l) for l in open(f_resultats) if l.strip()]
+
+    # Équipes : le recoupement entre cofondateurs est la corroboration la plus
+    # forte du pipeline — chaque fiche d'une société à plusieurs dirigeants
+    # voit les autres (données du greffe + extrait de leur profil scrapé),
+    # présentés comme données brutes, sans dépendre de l'ordre de traitement.
+    profils_ok = {r["rec_id"]: r.get("profil") or {} for r in resultats
+                  if r.get("statut") == "ok"}
+    par_siren: dict[str, list[str]] = {}
+    for rid, c in contexte.items():
+        if c.get("siren"):
+            par_siren.setdefault(c["siren"], []).append(rid)
+    for rids in par_siren.values():
+        for rid in rids:
+            if len(rids) < 2:
+                continue
+            eq = []
+            for autre in rids:
+                if autre == rid:
+                    continue
+                a = contexte[autre]
+                ai = a.get("indices") or {}
+                p = profils_ok.get(autre) or {}
+                extrait = ", ".join(str(p[k]) for k in ("companyName", "location")
+                                    if p.get(k))
+                attrs = [x for x in (
+                    f"domicilié à {ai['ville_dirigeant']}" if ai.get("ville_dirigeant") else None,
+                    f"né en {ai['naissance']}" if ai.get("naissance") else None,
+                    f"profil LinkedIn retenu : {extrait}" if extrait else None,
+                ) if x]
+                eq.append(f"{a.get('prenom') or ''} {a.get('nom') or ''}".strip()
+                          + (f" ({' ; '.join(attrs)})" if attrs else ""))
+            contexte[rid]["equipe"] = eq
 
     # Détail relu directement dans Airtable : le compteur d'homonymes écartés
     # (anti-boucle) ne dépend d'aucune clé posée à la main.
@@ -149,10 +192,7 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
         verdicts = {}
 
     with open(f_verdicts, "a") as out:
-        for l in open(f_resultats):
-            if not l.strip():
-                continue
-            ligne = json.loads(l)
+        for ligne in resultats:
             if ligne["statut"] != "ok" or ligne["rec_id"] in verdicts:
                 continue
             try:
@@ -174,12 +214,32 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
     # Sorties : profils validés -> scoring ; écartés -> retour en recherche
     aujourd_hui = dt.date.today().strftime("%d/%m")
     maj = []
+    vides = vides_termines = 0
     with open(f"{prefixe}_ok.jsonl", "w") as ok_out:
-        for l in open(f_resultats):
-            if not l.strip():
-                continue
-            ligne = json.loads(l)
+        for ligne in resultats:
             v = verdicts.get(ligne["rec_id"])
+            if ligne.get("statut") == "vide":
+                # Échec technique, pas une information sur l'URL : jamais scoré.
+                # 1re fois : marqueur durable + re-scrape au run suivant (reliquat) ;
+                # 2e fois : on arrête, traité comme URL morte.
+                deja = fiches.get(ligne["rec_id"], {}).get(CF["detail"]) or ""
+                if "Scrape vide" in deja:
+                    vides_termines += 1
+                    maj.append({"id": ligne["rec_id"], "fields": {
+                        CF["statut"]: "Non trouvé",
+                        CF["anomalie"]: True,
+                        CF["score"]: 0,
+                        CF["detail"]: deja + f" | 2e scrape vide le {aujourd_hui} : "
+                                             "URL traitée comme morte.",
+                    }})
+                else:
+                    vides += 1
+                    maj.append({"id": ligne["rec_id"], "fields": {
+                        CF["detail"]: (deja + " | " if deja else "")
+                        + f"Scrape vide le {aujourd_hui} (aucun champ utile) — "
+                          "re-scrape au prochain run.",
+                    }})
+                continue
             if v and v["verdict"] == "mauvais":
                 deja_ecartes = (fiches.get(ligne["rec_id"], {}).get(CF["detail"]) or "")
                 message = (f"Homonyme écarté le {aujourd_hui} ({ligne.get('url')}) : "
@@ -212,7 +272,8 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
     n_nv = sum(1 for v in verdicts.values() if v.get("non_verifie"))
     n_mauvais = sum(1 for v in verdicts.values() if v["verdict"] == "mauvais")
     print(f"{n_ok} profils confirmés, {n_mauvais} homonymes écartés, "
-          f"{n_nv} non vérifiés (Anomalie cochée).")
+          f"{n_nv} non vérifiés (Anomalie cochée), {vides} scrapes vides à "
+          f"reprendre demain, {vides_termines} traités en URL morte (2e vide).")
 
 
 if __name__ == "__main__":

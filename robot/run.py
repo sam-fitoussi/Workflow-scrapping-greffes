@@ -190,6 +190,7 @@ def traiter_date(date_fr: str, entreprises_connues: dict[str, str], sirens_trait
                 "ville": (e.get("siege") or {}).get("ville") or e.get("ville"),
                 "entreprise": e.get("nom_entreprise"),
                 "naf": e.get("libelle_code_naf"),
+                "siren": e.get("siren"),  # clé de regroupement des cofondateurs
                 "indices": _indices_greffe(d, e),
             }, ensure_ascii=False) + "\n")
 

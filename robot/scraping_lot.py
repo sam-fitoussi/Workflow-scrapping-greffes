@@ -13,6 +13,10 @@ le plafond — le cap (config.SCRAPE_DAILY_CAP) est donc bien quotidien,
 pas par invocation.
 Une URL morte (404 / résultat vide) sort en statut "mort" : le RUNBOOK
 demande alors « Non trouvé » + Anomalie (fait par robot/scorer_lot.py).
+Un objet renvoyé mais SANS contenu exploitable (moins de 2 des champs
+utiles remplis) sort en statut "vide" : c'est un échec technique, pas une
+information sur l'URL — robot/verif_identite.py le laisse sans score pour
+un re-scrape au run suivant, et le traite comme URL morte au 2e vide.
 
 Usage :
     python3 -m robot.scraping_lot file.jsonl resultats [cap]
@@ -23,6 +27,7 @@ import sys
 import time
 
 from . import config, phantoms
+from .note_ia import CHAMPS_PROFIL
 
 
 def _rec_ids_deja_traites(prefixe_sortie: str) -> set[str]:
@@ -50,6 +55,9 @@ def scraper_file(fichier_file: str, prefixe_sortie: str, cap: int = config.SCRAP
             p = profil[0] if isinstance(profil, list) and profil else profil
             if not p:
                 ligne["statut"] = "mort"  # URL 404 ou profil vide
+            elif sum(1 for k in CHAMPS_PROFIL if p.get(k) not in (None, "", [])) < 2:
+                ligne["statut"] = "vide"  # objet renvoyé mais sans contenu : échec technique
+                ligne["profil"] = p
             else:
                 ligne["statut"] = "ok"
                 ligne["profil"] = p

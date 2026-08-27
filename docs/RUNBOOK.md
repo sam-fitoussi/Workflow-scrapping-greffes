@@ -228,7 +228,11 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    travail qui n'en dépend pas (recherches restantes, étape 6a
    `ref.json` ; `contexte.jsonl` est déjà produit par robot.reliquat).
    Lire `resultats.jsonl` une seule fois à la fin (`resultats.etat`
-   donne l'avancement).
+   donne l'avancement). Un profil renvoyé SANS contenu exploitable sort
+   en statut « vide » : échec technique, pas une information sur l'URL —
+   le script de l'étape 5 le marque dans Détail et le laisse sans score
+   (re-scrapé au run suivant via le reliquat) ; au 2e scrape vide il est
+   traité comme URL morte. Rien à faire à la main.
    Plafond strict : 250 profils/jour (config.SCRAPE_DAILY_CAP —
    PhantomBuster annonce 1000-1500/jour sans risque, on garde une marge
    x4-6 car le compte LinkedIn est partagé), appliqué par le script. À
@@ -260,7 +264,11 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    « Trouvé » ne sont plus exemptés (décision du 27/08) : au moment du
    « Trouvé » on n'a que des extraits de recherche ; le scraping
    apporte les dates réelles, et un « Trouvé » erroné passait sans
-   aucun filet. ~30-40 appels Sonnet/jour, quelques centimes.
+   aucun filet. Le juge n'écarte que sur l'IDENTITÉ (naissance, dates,
+   domicile) — jamais sur le secteur quand l'identité est corroborée —
+   et reçoit les cofondateurs de la même société (greffe + extrait de
+   leur profil scrapé) : le recoupement d'équipe vaut aussi au
+   contrôle. ~30-40 appels Sonnet/jour, quelques centimes.
    `python3 -m robot.verif_identite resultats.jsonl contexte.jsonl verif`
    → `verif_ok.jsonl` (profils confirmés, entrée de l'étape 6) et
    `verif_maj.json` à pousser via
@@ -299,7 +307,11 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    profils concernés
    (notamment les « non vérifiés » de l'étape 5, dont la fiche ne porte
    que le drapeau : le rapport est le seul endroit où le motif apparaît).
-   Ne rien relancer ensuite.
+   Signaler aussi les profils notés sur un LinkedIn QUASI VIDE (moins de
+   5 des 16 champs remplis) : leur score et leur note sont fondés sur
+   presque rien — souvent le cas du fondateur en stealth qui ne touche
+   pas son profil, précisément celui qu'il ne faut pas rater sur un
+   malentendu. Ne rien relancer ensuite.
    Repère d'état utile : un champ « Score » rempli vaut marqueur « déjà
    traité » pour tout le pipeline aval.
 

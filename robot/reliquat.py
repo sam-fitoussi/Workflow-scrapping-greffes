@@ -85,7 +85,7 @@ def main(sortie_dir: str, fichiers_jour: list[str]) -> None:
         base = {"rec_id": r["id"], "prenom": f.get(CF["prenom"]), "nom": f.get(CF["nom"]),
                 "age": f.get(CF["age"]), "ville": e.get(CE["ville"]) or f.get(CF["ville"]),
                 "entreprise": e.get(CE["denomination"]), "naf": e.get(CE["libelle_naf"]),
-                "indices": indices}
+                "siren": f.get(CF["siren_cible"]), "indices": indices}
         if statut == "À chercher":
             urls = re.findall(r"https?://[^\s)|]+", detail)
             a_chercher.append(base | {"urls_exclues": urls})
