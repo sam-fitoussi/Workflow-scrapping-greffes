@@ -134,7 +134,11 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
      un employeur, une école ou une société commune à deux profils
      candidats verrouille les deux identités d'un coup. C'est le signal
      le plus puissant du pipeline, l'appliquer systématiquement dès
-     qu'une fiche a des cofondateurs.
+     qu'une fiche a des cofondateurs. Ces techniques ne sont PAS une
+     liste fermée : si le contexte suggère une piste prometteuse
+     (presse locale, GitHub, site perso, annuaire d'école, registre
+     étranger…), l'enquêter librement — c'est du jugement, pas une
+     procédure.
    - **Palier 3, dernier recours payant** (1 jeton Pappers ≈ 1/7 du
      coût d'une journée de tirage) : l'objet social en texte intégral
      via `https://api.pappers.fr/v2/entreprise?api_token=…&siren=…`
