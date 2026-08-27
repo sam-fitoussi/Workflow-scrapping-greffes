@@ -79,16 +79,29 @@ def _fiche_entreprise(e: dict, cercle: str, date_immat_fr: str) -> dict:
     }}
 
 
-def _autres_societes(d: dict, siren_cible: str) -> list[str]:
-    """Les autres mandats du dirigeant — déjà dans la réponse Pappers payée.
-    Un nom de société est un terme de recherche quasi unique : c'est le
-    « pont » qui départage les homonymes (RUNBOOK, recherche par paliers)."""
-    noms = []
-    for e in d.get("entreprises") or []:
-        nom = e.get("nom_entreprise")
-        if nom and e.get("siren") != siren_cible and nom not in noms:
-            noms.append(nom)
-    return noms
+def _indices_greffe(d: dict, e: dict) -> dict:
+    """Signaux d'identité gratuits, déjà dans la réponse Pappers payée
+    (RUNBOOK, recherche par paliers et contrôle d'identité) :
+    - naissance AAAA-MM et ville PERSONNELLE du dirigeant (≠ siège) :
+      les vrais discriminants d'homonymes ;
+    - nom d'usage / prénom usuel : souvent le nom du profil LinkedIn ;
+    - autres sociétés (rare sur cette population de primo-fondateurs,
+      ~1 fiche sur 70, mais quasi unique comme terme de recherche)."""
+    autres = []
+    for x in d.get("entreprises") or []:
+        nom = x.get("nom_entreprise")
+        if nom and x.get("siren") != e.get("siren") and nom not in autres:
+            autres.append(nom)
+    ind = {
+        "naissance": d.get("date_de_naissance_rgpd"),
+        "ville_dirigeant": d.get("ville"),
+        "nom_usage": d.get("nom_usage") if d.get("nom_usage") != d.get("nom") else None,
+        "prenom_usuel": (d.get("prenom_usuel")
+                         if d.get("prenom_usuel") != d.get("prenom") else None),
+        "sexe": d.get("sexe"),
+        "autres_societes": autres or None,
+    }
+    return {k: v for k, v in ind.items() if v}
 
 
 def _fiche_fondateur(d: dict, e: dict, rec_entreprise: str) -> dict:
@@ -101,17 +114,18 @@ def _fiche_fondateur(d: dict, e: dict, rec_entreprise: str) -> dict:
         CF["nom"]: nom,
         CF["age"]: d.get("age"),
         CF["qualite"]: d.get("qualite"),
-        CF["ville"]: siege.get("ville") or e.get("ville"),
+        # Ville PERSONNELLE du dirigeant (le siège est sur la fiche entreprise)
+        CF["ville"]: d.get("ville") or siege.get("ville") or e.get("ville"),
         CF["entreprise"]: [rec_entreprise],
         CF["siren_cible"]: e.get("siren"),
         CF["statut"]: "À chercher",
     }
-    # Consigné dans Détail pour survivre au reliquat (le disque est éphémère,
+    # Consignés dans Détail pour survivre au reliquat (le disque est éphémère,
     # et les noms courants qui rebouclent sont précisément des reliquats).
     # scorer_lot écrase Détail au scoring : à ce stade l'identité est réglée.
-    autres = _autres_societes(d, e.get("siren"))
-    if autres:
-        fields[CF["detail"]] = "Autres sociétés du dirigeant (Pappers) : " + ", ".join(autres)
+    indices = _indices_greffe(d, e)
+    if indices:
+        fields[CF["detail"]] = "Indices greffe : " + json.dumps(indices, ensure_ascii=False)
     return {"fields": fields}
 
 
@@ -171,10 +185,12 @@ def traiter_date(date_fr: str, entreprises_connues: dict[str, str], sirens_trait
                 "rec_id": rec["id"],
                 "date_source": date_fr,
                 "prenom": d.get("prenom"), "nom": d.get("nom"), "age": d.get("age"),
+                # ville = SIÈGE (la Note IA écrit « siège à … ») ; la ville
+                # personnelle du dirigeant est dans indices.ville_dirigeant
                 "ville": (e.get("siege") or {}).get("ville") or e.get("ville"),
                 "entreprise": e.get("nom_entreprise"),
                 "naf": e.get("libelle_code_naf"),
-                "autres_societes": _autres_societes(d, e.get("siren")),
+                "indices": _indices_greffe(d, e),
             }, ensure_ascii=False) + "\n")
 
     jetons_apres = pappers.jetons_restants()

@@ -4,8 +4,9 @@ Produit d'un coup tout ce que les étapes 3 à 6 du RUNBOOK consomment,
 sans aucune jointure ni parsing à la main :
 
   reliquat_a_chercher.jsonl  fiches « À chercher » des runs précédents,
-                             avec `urls_exclues` (homonymes déjà écartés,
-                             extraits de « Détail score »)
+                             avec `urls_exclues` (homonymes déjà écartés)
+                             et `indices` (indices greffe posés par run.py),
+                             tous deux extraits de « Détail score »
   reliquat_scrape.jsonl      {rec_id, url} : fiches Trouvé/Ambigu avec URL
                              mais SANS Score (le scraping n'a pas abouti)
   reliquat_fondateurs.jsonl  contexte de ces fiches (nom, âge, ville,
@@ -53,7 +54,8 @@ def main(sortie_dir: str, fichiers_jour: list[str]) -> None:
                 lignes_jour.append(d)
 
     ents = airtable.lire_table(config.TABLE_ENTREPRISES,
-                               [CE["siren"], CE["denomination"], CE["libelle_naf"]])
+                               [CE["siren"], CE["denomination"], CE["libelle_naf"],
+                                CE["ville"]])
     par_siren = {r["fields"].get(CE["siren"]): r["fields"] for r in ents
                  if r["fields"].get(CE["siren"])}
 
@@ -70,14 +72,20 @@ def main(sortie_dir: str, fichiers_jour: list[str]) -> None:
         statut = f.get(CF["statut"])
         e = par_siren.get(f.get(CF["siren_cible"]), {})
         detail = f.get(CF["detail"]) or ""
-        # Autres mandats consignés dans Détail par run.py à l'insertion :
-        # le « pont » de recherche des homonymes (RUNBOOK, paliers)
-        m = re.search(r"Autres sociétés du dirigeant \(Pappers\) : ([^|]+)", detail)
-        autres = [s.strip() for s in m.group(1).split(",") if s.strip()] if m else []
+        # Indices greffe consignés dans Détail par run.py à l'insertion
+        # (naissance, ville du dirigeant, noms d'usage, autres mandats) :
+        # les signaux d'identité des paliers et du contrôle (RUNBOOK)
+        m = re.search(r"Indices greffe : (\{.*?\})(?:\s*\||$)", detail)
+        try:
+            indices = json.loads(m.group(1)) if m else {}
+        except json.JSONDecodeError:
+            indices = {}
+        # ville = SIÈGE (table Entreprises), comme dans les fichiers du jour ;
+        # la ville personnelle du dirigeant est dans indices.ville_dirigeant
         base = {"rec_id": r["id"], "prenom": f.get(CF["prenom"]), "nom": f.get(CF["nom"]),
-                "age": f.get(CF["age"]), "ville": f.get(CF["ville"]),
+                "age": f.get(CF["age"]), "ville": e.get(CE["ville"]) or f.get(CF["ville"]),
                 "entreprise": e.get(CE["denomination"]), "naf": e.get(CE["libelle_naf"]),
-                "autres_societes": autres}
+                "indices": indices}
         if statut == "À chercher":
             urls = re.findall(r"https?://[^\s)|]+", detail)
             a_chercher.append(base | {"urls_exclues": urls})

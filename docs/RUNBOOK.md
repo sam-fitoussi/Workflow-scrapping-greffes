@@ -114,14 +114,24 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    dans Airtable. Ici : commencer par `reliquat_a_chercher.jsonl`
    (produit à l'étape 2 — le champ `urls_exclues` liste les homonymes
    déjà écartés, à EXCLURE des candidats), puis traiter les fondateurs du
-   jour (`*_fondateurs.jsonl`). Chaque ligne porte `autres_societes` :
-   les autres mandats du dirigeant, déjà payés dans le tirage Pappers —
-   le meilleur « pont » de recherche pour les noms courants.
+   jour (`*_fondateurs.jsonl`). Chaque ligne porte `indices` : les
+   signaux d'identité gratuits du tirage Pappers — `naissance`
+   (AAAA-MM), `ville_dirigeant` (le domicile PERSONNEL du dirigeant,
+   souvent différent du siège — c'est LUI qui figure sur LinkedIn),
+   `nom_usage` / `prenom_usuel` (souvent le nom du profil), `sexe`,
+   `autres_societes` (autres mandats — rare sur cette population de
+   primo-fondateurs, ~1 fiche sur 70, mais quasi unique comme terme de
+   recherche quand il est là). Le champ « Ville » de la fiche fondateur
+   est ce domicile personnel ; le siège est sur la fiche entreprise.
    Enquête PAR PALIERS, du gratuit vers le payant :
    - **Palier 1** (tous) : recherche web « "Prénom Nom" linkedin »
      RESTREINTE aux domaines LinkedIn (paramètre `allowed_domains` de
      WebSearch) — élimine le bruit hors sujet (homonymes américains,
-     Wikipédia). Cette restriction ne vaut QUE pour cette requête de
+     Wikipédia). Si elle ne renvoie que des pages d'annuaire vides
+     (`/pub/dir/…`), refaire la requête SANS la restriction. Essayer
+     aussi les variantes `nom_usage` / `prenom_usuel` quand elles
+     existent : c'est souvent sous ce nom-là que la personne est
+     inscrite. Cette restriction ne vaut QUE pour cette requête de
      listage des candidats : l'enquête de DÉPARTAGE (paliers suivants)
      est libre — presse, site de la société, pages équipe, annuaires,
      tout est bon.
@@ -129,12 +139,15 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
      recherche par NOM DE SOCIÉTÉ (beaucoup de SAS sont immatriculées
      après le lancement du produit : la boîte est parfois déjà sur le
      profil) ; « "Prénom Nom" "<autre société>" » avec chaque nom de
-     `autres_societes` (un nom de société est un terme quasi unique).
+     `autres_societes` quand il y en a.
      Et surtout : RECOUPER ENTRE COFONDATEURS de la même entreprise —
      un employeur, une école ou une société commune à deux profils
      candidats verrouille les deux identités d'un coup. C'est le signal
      le plus puissant du pipeline, l'appliquer systématiquement dès
-     qu'une fiche a des cofondateurs. Ces techniques ne sont PAS une
+     qu'une fiche a des cofondateurs — et il commence AVANT toute
+     recherche : leurs `ville_dirigeant` (deux cofondateurs domiciliés
+     dans la même petite commune, c'est un ancrage géographique fort
+     pour toute l'équipe). Ces techniques ne sont PAS une
      liste fermée : si le contexte suggère une piste prometteuse
      (presse locale, GitHub, site perso, annuaire d'école, registre
      étranger…), l'enquêter librement — c'est du jugement, pas une
@@ -162,9 +175,15 @@ utiliser les IDs explicites de cette section et de `robot/config.py`.
    la CONTRADICTION FLAGRANTE : si le profil unique dément frontalement
    la fiche — âge impossible, OU secteur frontalement sans rapport
    (ex. : étudiant en métiers d'art pour une société de programmation,
-   coiffeur pour une biotech). La géographie ne compte qu'EN RENFORT
-   d'un autre signal, jamais seule (un fondateur vit souvent ailleurs
-   que le siège). Dans ces cas → « Ambigu », le contrôle de l'étape 5
+   coiffeur pour une biotech). Sur la géographie : la ville de la
+   fiche est le domicile PERSONNEL du dirigeant — une CONCORDANCE avec
+   un candidat est une confirmation forte ; une DIFFÉRENCE ne suffit
+   jamais seule à écarter (les gens déménagent), elle ne compte qu'en
+   renfort d'un autre signal. Et un secteur discordant ne pèse rien
+   quand l'identité est corroborée par ailleurs (âge, ville, société
+   commune) : les gens se reconvertissent — c'est le scoring qui juge
+   l'intérêt, pas la recherche. Dans les cas douteux → « Ambigu », le
+   contrôle de l'étape 5
    tranche pour un centime. La rareté du nom ne dispense PAS de cette exception :
    LinkedIn n'indexe pas tous les profils, « un seul résultat » signifie
    « un seul profil indexé », pas « une seule personne » — et le fondateur
