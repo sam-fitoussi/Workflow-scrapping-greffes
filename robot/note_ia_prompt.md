@@ -1,6 +1,6 @@
 # Barème de la Note IA (sur 20) — COPIE DE SECOURS
 
-⚠️ La version qui FAIT FOI vit dans Airtable : base « Scrapping Pappers »,
+⚠️ La version qui FAIT FOI vit dans Airtable : base « Sourcing - principal »,
 table **Prompts**, enregistrement « Barème note fondateur /20 ». C'est
 là que Samuel édite le barème, et le robot la relit à chaque run. Ce
 fichier ne sert que si Airtable est inaccessible — le resynchroniser

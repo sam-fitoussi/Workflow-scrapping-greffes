@@ -1,7 +1,7 @@
 """Étape 5 du robot : scoring déterministe d'un profil LinkedIn.
 
 Principe : chaque école ou entreprise de la table Airtable « Scoring »
-(base Scrapping Pappers) présente sur le profil du fondateur lui apporte
+(base Sourcing - principal) présente sur le profil du fondateur lui apporte
 les points de la ligne (1 par défaut).
 
 Matching déterministe : égalité de chaînes après normalisation légère

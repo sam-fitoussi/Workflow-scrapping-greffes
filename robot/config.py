@@ -48,7 +48,7 @@ def modele_ia() -> str:
               f"repli sur {MODELE_IA_DEFAUT}. À signaler dans le rapport.")
     return _modele_ia
 
-# --- Airtable (base "Scrapping Pappers") ---
+# --- Airtable (base "Sourcing - principal", ex-"Scrapping Pappers") ---
 AIRTABLE_BASE_ID = "appdJUoNvhEi5jsJr"
 TABLE_ENTREPRISES = "tblxNwg1hpC3xbVgA"
 TABLE_FONDATEURS = "tblBngzHytB48MiDK"
