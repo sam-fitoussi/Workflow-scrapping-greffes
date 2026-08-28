@@ -41,6 +41,14 @@ chercher une base ou une table par son nom (`search_bases`,
 dans l'ancienne base Deal Flow (`appjOlBa3e7jyX5XZ`) — le pipeline
 historique de Samuel, interdit en lecture comme en écriture. Toujours
 utiliser les IDs explicites de cette section et de `robot/config.py`.
+La base « Scrapping Pappers » contient AUSSI des onglets miroirs
+synchronisés des autres canaux de sourcing (« Fondateurs (Evertrace) »,
+« France (The Veck) », « International (The Veck) ») et 16 automatisations
+Airtable de déduplication inter-canaux (propagation de la case « Vu » par
+Slug LinkedIn, mise en place le 28/08/2026) : le robot ne touche NI aux
+onglets miroirs NI à ces automatisations, et n'écrit JAMAIS la case
+« Vu » ni les champs « Slug LinkedIn » / « Vu récent » (formules) — la
+case « Vu » peut être cochée de l'extérieur à tout moment, c'est normal.
 
 - Base Airtable « Scrapping Pappers » : `appdJUoNvhEi5jsJr`
   - Table Entreprises : `tblxNwg1hpC3xbVgA`
