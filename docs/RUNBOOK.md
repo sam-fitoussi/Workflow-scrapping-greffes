@@ -49,6 +49,9 @@ Slug LinkedIn, mise en place le 28/08/2026) : le robot ne touche NI aux
 onglets miroirs NI à ces automatisations, et n'écrit JAMAIS la case
 « Vu » ni les champs « Slug LinkedIn » / « Vu récent » (formules) — la
 case « Vu » peut être cochée de l'extérieur à tout moment, c'est normal.
+La table « Revue » (`tblcAnzoiOw7qt8WA`) est le tableau de bord matinal
+de Samuel, peuplée par une ROUTINE SÉPARÉE (~8h30, robot/revue.py,
+docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
 
 - Base Airtable « Sourcing - principal » (renommée le 28/08/2026,
   ex-« Scrapping Pappers » — même base, même ID) : `appdJUoNvhEi5jsJr`
