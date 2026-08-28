@@ -337,12 +337,7 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    5 des 16 champs remplis) : leur score et leur note sont fondés sur
    presque rien — souvent le cas du fondateur en stealth qui ne touche
    pas son profil, précisément celui qu'il ne faut pas rater sur un
-   malentendu. Enfin, si la RECHERCHE a découvert un signal
-   exceptionnel sur une société (lauréat d'un concours, levée, presse
-   tech, produit déjà lancé), le mentionner dans le rapport MÊME si le
-   score du fondateur est 0 — une ligne suffit : le rapport est le seul
-   endroit où une découverte de recherche survit au pipeline.
-   Ne rien relancer ensuite.
+   malentendu. Ne rien relancer ensuite.
    Repère d'état utile : un champ « Score » rempli vaut marqueur « déjà
    traité » pour tout le pipeline aval.
 
