@@ -63,7 +63,13 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
     fondateur /20 » est LA source de vérité du barème de la Note IA
     (robot/note_ia.py le relit à chaque run ; le fichier
     robot/note_ia_prompt.md n'est qu'un secours)
-  - Les IDs de champs sont dans `robot/config.py` (CHAMPS_*).
+  - Les IDs de champs sont dans `robot/config.py` (CHAMPS_*). Aide-mémoire
+    des champs Fondateurs qu'on manipule le plus (payloads et fichiers) :
+    `flddKwLMI63aBsSZQ`=Statut LinkedIn · `fldOuQobUTZdWT8iz`=LinkedIn URL ·
+    `fldgf0zCUWs3jT2qB`=Méthode · `fld9vwNO3qNOoqbe4`=Score ·
+    `fldI248T6i6a9qvYA`=Détail score · `fldcCc78Gb1WGWoUL`=Résumé profil ·
+    `fldDARjR1pwhcxxxM`=Note IA · `fldyQkdNmlJWjLXxv`=Justification ·
+    `flddifOPKnUCBSfC4`=Anomalie · `fldEFrlCmXUUXVKPb`=Vu.
 - PhantomBuster : Profile Scraper `4668942683298432` (l'URL Finder est retiré).
 - Clés API (`PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT),
   `ROBOT_ANTHROPIC_API_KEY`, `PHANTOMBUSTER_API_KEY`) : leur place est
@@ -80,18 +86,17 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
 
 1. **Dates cibles.** Pappers indexe avec ~2 jours ouvrés de retard : ne
    JAMAIS viser une date fixe.
-   a. Lire d'abord le Journal des runs (petite table : MCP ou
-      `python3 -m robot.airtable lire`).
-   b. Sonder UNIQUEMENT les dates absentes du Journal :
+   a. Sonder UNIQUEMENT les dates absentes du Journal :
       `python3 -m robot.run --sonde --auto`
-      (le script lit le Journal lui-même, en exclut les dates traitées et
-      calcule la profondeur ; 0,1 jeton par date sondée. `--sauf`/`--jours`
-      restent disponibles pour forcer à la main).
-   c. Dates cibles = celles avec `total > 0` SANS ligne au Journal. S'il
+      (le script lit le Journal LUI-MÊME — inutile de le lire avant —,
+      en exclut les dates traitées et calcule la profondeur ; 0,1 jeton
+      par date sondée. `--sauf`/`--jours` restent disponibles pour
+      forcer à la main).
+   b. Dates cibles = celles avec `total > 0` SANS ligne au Journal. S'il
       n'y en a aucune : NE PAS tirer chez Pappers, mais dérouler quand
       même les étapes 3 à 8 sur les reliquats (fiches « À chercher »,
       fiches avec URL sans score), puis le rapport.
-   d. Le dimanche, rattrapage : sonder aussi les dates du Journal des 14
+   c. Le dimanche, rattrapage : sonder aussi les dates du Journal des 14
       derniers jours (`--sonde --jours 14`, sans `--sauf`) et re-traiter
       TOUTE date dont le total sondé dépasse la colonne « **Bruts cœur** »
       du Journal, même d'une unité. ⚠️ Comparer au sondage la colonne
@@ -151,7 +156,12 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
      recherche par NOM DE SOCIÉTÉ (beaucoup de SAS sont immatriculées
      après le lancement du produit : la boîte est parfois déjà sur le
      profil) ; « "Prénom Nom" "<autre société>" » avec chaque nom de
-     `autres_societes` quand il y en a.
+     `autres_societes` quand il y en a. Réflexe à haut rendement : si
+     la société a un site actif, WebFetch sa page équipe/à-propos —
+     c'est souvent ce qui débloque un fondateur introuvable par nom
+     (profils LinkedIn sous pseudonyme ou initiale). Sur ces recherches
+     libres, passer `blocked_domains: ["wikipedia.org"]` : l'outil est
+     biaisé US et Wikipédia ne renvoie que des homonymes célèbres.
      Et surtout : RECOUPER ENTRE COFONDATEURS de la même entreprise —
      un employeur, une école ou une société commune à deux profils
      candidats verrouille les deux identités d'un coup. C'est le signal
@@ -268,6 +278,10 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    par tranches de 5-8 minutes.
    ⚠️ Ne jamais `cat` un gros JSON dans le contexte : le lire via un
    script Python qui n'imprime qu'un résumé (comptes, échantillon).
+   ⚠️ Piège shell : `VAR=... && nohup cmd &` met TOUTE la chaîne en
+   tâche de fond et la variable est perdue — définir les variables sur
+   la même ligne que la commande (`VAR=... nohup cmd &`) ou avant, sans
+   enchaîner avec `&&`.
 
 5. **Contrôle d'identité (anti-homonymes)** — TOUS les profils scrapés,
    « Trouvé » compris, AVANT le scoring. La pire erreur du pipeline est
@@ -323,7 +337,12 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    5 des 16 champs remplis) : leur score et leur note sont fondés sur
    presque rien — souvent le cas du fondateur en stealth qui ne touche
    pas son profil, précisément celui qu'il ne faut pas rater sur un
-   malentendu. Ne rien relancer ensuite.
+   malentendu. Enfin, si la RECHERCHE a découvert un signal
+   exceptionnel sur une société (lauréat d'un concours, levée, presse
+   tech, produit déjà lancé), le mentionner dans le rapport MÊME si le
+   score du fondateur est 0 — une ligne suffit : le rapport est le seul
+   endroit où une découverte de recherche survit au pipeline.
+   Ne rien relancer ensuite.
    Repère d'état utile : un champ « Score » rempli vaut marqueur « déjà
    traité » pour tout le pipeline aval.
 
