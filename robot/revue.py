@@ -87,16 +87,19 @@ def main() -> None:
 
     # 3. Nouvelles fiches examinables, groupées par slug (dédup du run)
     groupes: dict[str, list[dict]] = {}
-    par_canal = {c: 0 for c in ORDRE}
     for canal in ORDRE:
         for l in _lignes_canal(canal, denominations):
             if l["rec_id"] in deja_liees:
                 continue
             groupes.setdefault(l["slug"], []).append(l)
-            par_canal[canal] += 1
 
-    # 4. Créations (et compléments si seconde exécution le même jour)
+    # 4. Créations (et compléments si seconde exécution le même jour).
+    # Ventilation par canal PRINCIPAL de chaque ligne créée : la somme des
+    # quatre chiffres égale exactement le nombre de lignes (un profil
+    # multi-canaux compte une fois, il est signalé à part).
     creations, majs = [], []
+    par_canal = {c: 0 for c in ORDRE}
+    multi_canaux = 0
     for slug, lignes in groupes.items():
         lignes.sort(key=lambda l: ORDRE.index(l["canal"]))
         existant = index_du_jour.get(slug)
@@ -108,6 +111,9 @@ def main() -> None:
                 liens[c]: ids for c, ids in nouveaux.items() if ids}})
             continue
         premier = lignes[0]
+        par_canal[premier["canal"]] += 1
+        if len({l["canal"] for l in lignes}) > 1:
+            multi_canaux += 1
         champs = {
             CR["nom"]: premier["nom"], CR["jour"]: jour_du_run, CR["slug"]: slug,
             CR["societe"]: next((l["societe"] for l in lignes if l["societe"]), None),
@@ -129,9 +135,10 @@ def main() -> None:
     if creations:
         airtable.inserer(config.TABLE_REVUE, creations)
     ventilation = " · ".join(f"{c} {n}" for c, n in par_canal.items())
-    print(f"Revue du {jour_du_run} : {len(creations)} lignes créées"
-          + (f", {len(majs)} complétées" if majs else "")
-          + f" — {ventilation}.")
+    print(f"Revue du {jour_du_run} : {len(creations)} lignes créées — {ventilation}"
+          + (f" (dont {multi_canaux} multi-canaux)" if multi_canaux else "")
+          + (f" ; {len(majs)} lignes du jour complétées" if majs else "")
+          + ".")
 
 
 if __name__ == "__main__":

@@ -40,10 +40,12 @@ regarde chaque matin, groupée par « Jour », filtrée sur « Vu » décoché.
    La clé est dans `AIRTABLE_API_KEY` (variables d'environnement).
 3. Lire la sortie du script : « Revue du AAAA-MM-JJ : N lignes créées —
    Pappers X · Evertrace Y · The Veck FR Z · The Veck INT W. »
-   N = les nouveaux profils de ce matin, tous datés du jour du run —
-   il n'y a rien à reconstituer ni à ventiler soi-même. Zéro création
-   est NORMAL si les canaux n'ont rien remonté — ce n'est pas une
-   erreur.
+   N = les nouveaux profils de ce matin, tous datés du jour du run, et
+   X+Y+Z+W = N (chaque ligne est attribuée à son canal principal ; les
+   profils remontés par plusieurs canaux comptent une fois et sont
+   signalés « dont k multi-canaux »). Il n'y a rien à reconstituer ni
+   à ventiler soi-même. Zéro création est NORMAL si les canaux n'ont
+   rien remonté — ce n'est pas une erreur.
 4. Terminer par une PushNotification d'UNE ligne qui recopie cette
    sortie : « Revue : N nouveaux profils ce matin (Pappers X ·
    Evertrace Y · The Veck FR Z · The Veck INT W) » — ou la description
