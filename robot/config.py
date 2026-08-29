@@ -115,14 +115,12 @@ CHAMPS_REVUE = {
     "resume": "fldGnmzJ2ONfbvhKt",
 }
 # Les 4 canaux sources de la Revue. Par canal : la table, le champ lien dans
-# Revue, et les champs lus par robot/revue.py. `jour` est le champ texte
-# AAAA-MM-JJ quand il existe, sinon None et `jour_dt` (dateTime) est converti
-# en date de Paris par le script.
+# Revue, et les champs lus par robot/revue.py. Le « Jour » d'une ligne Revue
+# est la date du run qui l'a découverte (pas une date lue dans le canal).
 CANAUX_REVUE = {
     "Pappers": {
         "table": TABLE_FONDATEURS, "lien": "fldSUju9p2xxMxN8q",
         "slug": "fldKJi3KPb9iayqF9", "nom": "fld7WKOhWhnUMDQMo",
-        "jour": "fld0cBnkkvuzFfLTj", "jour_dt": None,
         "societe": None,  # résolue via SIREN cible -> table Entreprises
         "siren": "fldJAGwDDXJBbT8fZ",
         "role": "fldXs4LLWRFCzZ4vX", "ville": "fldFMhPBQaBibMqgx",
@@ -131,7 +129,6 @@ CANAUX_REVUE = {
     "Evertrace": {
         "table": "tblaGXJ4SVt6e2fiZ", "lien": "fld4bea7jnTcJtd0o",
         "slug": "fld8VNAClakASMQD0", "nom": "fldZOghQZeIbXmaaw",
-        "jour": "fldWT557nmcRPXBuq", "jour_dt": "fldG69xmXc1MEtnBb",
         "societe": "fldHd5nMMarZXJfBr", "siren": None,
         "role": "fldYLO4a0f1QvbUSP", "ville": "fld5sIZkwdRiW8Ryn",
         "url": "fldi3bz9aD7JKllBO", "resume": None,
@@ -139,7 +136,6 @@ CANAUX_REVUE = {
     "The Veck FR": {
         "table": "tblVJTIAezbM0Ab3H", "lien": "fldHxjvsEVyA3M3tx",
         "slug": "fldNJmSiYyqNKl7Ne", "nom": "fldqipns2LcS1pqKl",
-        "jour": None, "jour_dt": "fldaZRRdmIfYfTRVI",
         "societe": "fldn2XYF87r7FxFDd", "siren": None,
         "role": "fldUg89nFyAmAeS7A", "ville": "fldMwjqqFtwqfRo2U",
         "url": "fldvwnMeeEWDKvDTu", "resume": "fldDZS49vHPlQ8KWi",
@@ -147,7 +143,6 @@ CANAUX_REVUE = {
     "The Veck INT": {
         "table": "tbl4pb4ypjImweUYw", "lien": "fldCqG5KCs8l3eMRH",
         "slug": "fldyf6j8piyVx1nzl", "nom": "fldcUAt9KPXDMkPK0",
-        "jour": None, "jour_dt": "fldK9cU5FQu7G7a2B",
         "societe": "fldLk3r4GnBMyb0rW", "siren": None,
         "role": "fldY8fActQC9M56qV", "ville": "fldvopfGFV4040ecp",
         "url": "fldMwAIZbkxpdj6nf", "resume": "fldrU1YQqBo04plxx",

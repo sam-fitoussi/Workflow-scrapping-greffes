@@ -12,9 +12,12 @@ L'onglet **Revue** (`tblcAnzoiOw7qt8WA`) de la base « Sourcing -
 principal » (`appdJUoNvhEi5jsJr`) agrège les fondateurs EXAMINABLES
 (profil LinkedIn identifié) des 4 tables sources — Fondateurs (Pappers),
 Fondateurs (Evertrace), France (The Veck), International (The Veck) —
-en une ligne par (profil, jour de signalement), dédoublonnée par slug
-LinkedIn au sein d'un même jour. Samuel la regarde chaque matin,
-groupée par « Jour », filtrée sur « Vu » décoché.
+en une ligne par profil découvert par le run, dédoublonnée par slug
+LinkedIn. « Jour » = la DATE DU RUN (heure de Paris), pas une date lue
+dans le canal : tout ce qui apparaît dans la Revue apparaît dans le
+groupe du matin où Samuel va le lire, y compris les fiches arrivées la
+veille en journée ou les reliquats résolus tardivement. Samuel la
+regarde chaque matin, groupée par « Jour », filtrée sur « Vu » décoché.
 
 - Les colonnes d'information (Note IA, Justification, Score…) sont des
   **lookups** qui suivent les fiches sources en direct — le script
@@ -35,13 +38,17 @@ groupée par « Jour », filtrée sur « Vu » décoché.
 2. `python3 -m robot.revue` — idempotent : les fiches sources déjà
    liées dans Revue sont ignorées, relancer ne crée aucun doublon.
    La clé est dans `AIRTABLE_API_KEY` (variables d'environnement).
-3. Lire la sortie du script (« N lignes créées, M complétées, par
-   jour : … »). Zéro création est NORMAL si les canaux n'ont rien
-   remonté — ce n'est pas une erreur.
-4. Terminer par une PushNotification d'UNE ligne :
-   « Revue : N nouveaux profils ce matin (Pappers X · Evertrace Y ·
-   The Veck Z) » — ou la description du blocage si le script a échoué.
-   Le silence n'est jamais acceptable.
+3. Lire la sortie du script : « Revue du AAAA-MM-JJ : N lignes créées —
+   Pappers X · Evertrace Y · The Veck FR Z · The Veck INT W. »
+   N = les nouveaux profils de ce matin, tous datés du jour du run —
+   il n'y a rien à reconstituer ni à ventiler soi-même. Zéro création
+   est NORMAL si les canaux n'ont rien remonté — ce n'est pas une
+   erreur.
+4. Terminer par une PushNotification d'UNE ligne qui recopie cette
+   sortie : « Revue : N nouveaux profils ce matin (Pappers X ·
+   Evertrace Y · The Veck FR Z · The Veck INT W) » — ou la description
+   du blocage si le script a échoué. Le silence n'est jamais
+   acceptable.
 
 ## En cas de problème
 
