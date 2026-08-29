@@ -194,9 +194,9 @@ def champs_remplis(profil: dict) -> int:
 PHANTOM_URL_FINDER_ID = "6409925669476364"   # Deal Flow - Linkedin Profile URL Finder
 PHANTOM_SCRAPER_ID = "4668942683298432"      # Deal Flow - Linkedin Profile Scraper
 # Plafond de profils scrapés par jour. PhantomBuster indique 1000-1500/jour
-# sans risque sur un compte LinkedIn standard ; 250 garde une marge x4-6
+# sans risque sur un compte LinkedIn standard ; 300 garde une marge x3-5
 # (compte partagé avec d'autres automatisations). Toujours séquentiel.
-SCRAPE_DAILY_CAP = 250
+SCRAPE_DAILY_CAP = 300
 
 # --- Périmètre Pappers ---
 # Formes juridiques : SAS (5710) et SASU (5720)
@@ -216,6 +216,11 @@ NAF_COEUR = [
     "2720Z",  # Batteries
     "3030Z",  # Aéronautique / spatial
     "2110Z",  # Pharma
+    # Fintech au cœur (décision du 29/08/2026, volume mesuré ~1-2/jour) :
+    # une vraie fintech peut avoir un objet social générique que le filtre
+    # par mots-clés de la périphérie raterait. 6630Z reste en périphérie.
+    "6419Z",  # Autres intermédiations monétaires (banques, néobanques)
+    "6499Z",  # Autres services financiers
 ]
 
 # Cercle périphérie : inclus seulement si l'objet social matche un mot-clé tech
@@ -224,7 +229,11 @@ NAF_PERIPHERIE = [
     "7022Z",  # Conseil pour les affaires (gros gisement caché)
     "7490B",  # Activités scientifiques et techniques diverses
     "7112B",  # Ingénierie, études techniques
-    "6419Z", "6499Z", "6630Z",  # Fintech
+    # 6630Z (gestion de fonds) reste ICI, filtré par mots-clés : mesuré à
+    # ~29 dirigeants/jour dont l'écrasante majorité sont des SPV, sociétés
+    # de gestion et family offices — le passer au cœur ajouterait ~40 % de
+    # bruit au pipeline (mesure du 29/08/2026 sur 5 jours : 145/152).
+    "6630Z",
     "4791A", "4791B",  # E-commerce / D2C
     "8690F", "8610Z",  # Santé
     "7220Z",  # R&D sciences humaines

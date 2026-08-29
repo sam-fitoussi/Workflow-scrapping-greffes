@@ -103,8 +103,10 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
       n'y en a aucune : NE PAS tirer chez Pappers, mais dérouler quand
       même les étapes 3 à 8 sur les reliquats (fiches « À chercher »,
       fiches avec URL sans score), puis le rapport.
-   c. Le dimanche, rattrapage : sonder aussi les dates du Journal des 14
-      derniers jours (`--sonde --jours 14`, sans `--sauf`) et re-traiter
+   c. Le dimanche, rattrapage : sonder aussi les dates du Journal des 21
+      derniers jours (`--sonde --jours 21`, sans `--sauf` — chaque semaine
+      est ainsi re-sondée trois dimanches de suite, pour ~2 jetons) et
+      re-traiter
       TOUTE date dont le total sondé dépasse la colonne « **Bruts cœur** »
       du Journal, même d'une unité. ⚠️ Comparer au sondage la colonne
       « Bruts cœur », JAMAIS « Dirigeants bruts » : le sondage ne voit que
@@ -281,10 +283,10 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    le script de l'étape 5 le marque dans Détail et le laisse sans score
    (re-scrapé au run suivant via le reliquat) ; au 2e scrape vide il est
    traité comme URL morte. Rien à faire à la main.
-   Plafond strict : 250 profils/jour (config.SCRAPE_DAILY_CAP —
+   Plafond strict : 300 profils/jour (config.SCRAPE_DAILY_CAP —
    PhantomBuster annonce 1000-1500/jour sans risque, on garde une marge
-   x4-6 car le compte LinkedIn est partagé), appliqué par le script. À
-   ~38 s par profil, une journée pleine peut prendre jusqu'à ~2h40 de
+   x3-5 car le compte LinkedIn est partagé), appliqué par le script. À
+   ~38 s par profil, une journée pleine peut prendre jusqu'à ~3h10 de
    scraping : le lancer TÔT dans le run, en tâche de fond. (En cas de
    relance dans la MÊME session — après compaction par exemple — les
    rec_id déjà scrapés sont sur disque, sautés, et comptent dans le
@@ -399,7 +401,7 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
 
 ## Ce que le run ne fait JAMAIS
 
-- Dépasser 250 profils scrapés/jour (config.SCRAPE_DAILY_CAP) ou
+- Dépasser 300 profils scrapés/jour (config.SCRAPE_DAILY_CAP) ou
   paralléliser le scraping.
 - Re-tirer une date déjà traitée en dehors du rattrapage du dimanche.
 - Faire transiter un payload Airtable volumineux par le contexte (fichiers
