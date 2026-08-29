@@ -23,7 +23,8 @@ main » que là où il apporte un jugement :
 | Contrôle d'identité (anti-homonymes) | script | `python3 -m robot.verif_identite` |
 | Scoring + payloads de mise à jour | script | `python3 -m robot.scorer_lot` |
 | Note IA | script | `python3 -m robot.note_ia` |
-| Rapport final | modèle | résumé en français |
+| Digest du rapport (jointures, entonnoir) | script | `python3 -m robot.rapport` |
+| Rapport final | modèle | rédaction en français à partir du digest |
 
 Règle d'or : **les payloads Airtable ne transitent jamais par le contexte
 du modèle**. On les écrit dans des fichiers JSON et on les pousse avec
@@ -81,6 +82,12 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
   (les scripts acceptent les deux noms).
 - Le repo est consulté en LECTURE : ne jamais committer ni pousser pendant
   un run quotidien, quelle que soit la branche imposée par la session.
+- ⚠️ **Le répertoire de travail est RÉINITIALISÉ entre deux commandes
+  Bash** : un `cd` ne survit jamais à la commande qui le contient.
+  Toujours lancer les `python3 -m robot.*` depuis la racine du repo
+  (chemin absolu du repo en tête de commande si besoin) et passer TOUS
+  les fichiers en CHEMINS ABSOLUS (`/tmp/run_du_jour/...`). Un
+  `cd /tmp && python3 -m robot.run` casse la commande suivante.
 
 ## Étapes du run quotidien
 
@@ -123,8 +130,14 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    → `reliquat_a_chercher.jsonl` (fiches « À chercher » des runs
    précédents, champ `urls_exclues` = homonymes déjà écartés),
    `reliquat_scrape.jsonl` (URL sans score, à re-scraper),
-   `reliquat_fondateurs.jsonl` et `contexte.jsonl` COMPLET (reliquat +
-   jour), prêt pour les étapes 5-6. Ne rien reconstruire à la main.
+   `reliquat_fondateurs.jsonl`, `contexte.jsonl` COMPLET (reliquat +
+   jour, prêt pour les étapes 5-6) et `equipes.jsonl` (une ligne par
+   société à ≥ 2 cofondateurs : membres côte à côte avec indices greffe
+   et URLs écartées — le support du recoupement d'équipe de l'étape 3).
+   Ne rien reconstruire à la main.
+   Sitôt `robot.reliquat` terminé, lancer la **vague 1 du scraping**
+   (étape 4) sur `reliquat_scrape.jsonl` : elle ne dépend d'aucune
+   recherche, autant qu'elle tourne pendant l'étape 3.
 
 3. **Recherche LinkedIn** (modèle). Principe général du pipeline : chaque
    étape reprend D'ABORD ce que la précédente n'a pas fini, en le lisant
@@ -151,7 +164,11 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
      inscrite. Cette restriction ne vaut QUE pour cette requête de
      listage des candidats : l'enquête de DÉPARTAGE (paliers suivants)
      est libre — presse, site de la société, pages équipe, annuaires,
-     tout est bon.
+     tout est bon. Sur les fiches SANS cofondateur, jouer AUSSI d'emblée
+     (dans le même lot de recherches) la recherche par NOM DE SOCIÉTÉ du
+     palier 2 : sans équipe à recouper, c'est elle qui débloque les cas
+     durs (6 fiches solo résolues ainsi le 28/08) — inutile d'attendre
+     l'échec du palier 1 pour la lancer.
    - **Palier 2** (si 0 candidat, ou plusieurs sans discriminant) :
      recherche par NOM DE SOCIÉTÉ (beaucoup de SAS sont immatriculées
      après le lancement du produit : la boîte est parfois déjà sur le
@@ -169,7 +186,9 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
      qu'une fiche a des cofondateurs — et il commence AVANT toute
      recherche : leurs `ville_dirigeant` (deux cofondateurs domiciliés
      dans la même petite commune, c'est un ancrage géographique fort
-     pour toute l'équipe). Ces techniques ne sont PAS une
+     pour toute l'équipe). Les équipes sont servies toutes prêtes par
+     `equipes.jsonl` (étape 2) : traiter chaque société de ce fichier
+     EN BLOC, membres ensemble, plutôt que fiche par fiche. Ces techniques ne sont PAS une
      liste fermée : si le contexte suggère une piste prometteuse
      (presse locale, GitHub, site perso, annuaire d'école, registre
      étranger…), l'enquêter librement — c'est du jugement, pas une
@@ -237,20 +256,27 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    non-vérifié, 2e homonyme) restent cochées : ce sont des états
    terminaux ou des informations permanentes.
 
-4. **Scraping** (script en tâche de fond, EN DEUX VAGUES). La file JSONL
-   (`{"rec_id", "url"}` par ligne) part de `reliquat_scrape.jsonl`
-   (produit à l'étape 2) ; les URLs du jour s'y ajoutent au fil de
-   l'étape 3. Ne pas attendre la fin des recherches : **vague 1** dès que
-   le reliquat + ~15 premières URLs du jour sont prêts, lancer EN TÂCHE
-   DE FOND `python3 -m robot.scraping_lot file.jsonl resultats` et
-   poursuivre les recherches ; **vague 2** une fois toutes les recherches
-   faites, relancer la même commande avec le fichier complété et le MÊME
-   préfixe `resultats` — la reprise par rec_id saute ce qui est déjà
-   scrapé, c'est sûr par construction. Pendant le scraping, faire le
-   travail qui n'en dépend pas (recherches restantes, étape 6a
-   `ref.json` ; `contexte.jsonl` est déjà produit par robot.reliquat).
-   Lire `resultats.jsonl` une seule fois à la fin (`resultats.etat`
-   donne l'avancement). Un profil renvoyé SANS contenu exploitable sort
+4. **Scraping** (script en tâche de fond, EN DEUX VAGUES) :
+   - **Vague 1 — le reliquat, sitôt l'étape 2 finie** (avant les
+     recherches, elle n'en dépend pas) :
+     `python3 -m robot.scraping_lot /tmp/run_du_jour/reliquat_scrape.jsonl /tmp/run_du_jour/resultats`
+   - **Vague 2 — les URLs du jour, une fois TOUTES les recherches
+     faites** : écrire la file JSONL (`{"rec_id", "url"}` par ligne) et
+     relancer la même commande avec ce fichier et le MÊME préfixe
+     `resultats` — la reprise par rec_id saute ce qui est déjà scrapé,
+     c'est sûr par construction. (Les recherches par lots durent
+     ~10 minutes : inutile d'intercaler des débuts de vague au fil de
+     l'eau.)
+   Tâche de fond = le paramètre `run_in_background` de l'outil Bash —
+   le harness suit la commande et RÉVEILLE la session quand elle se
+   termine. Jamais `nohup … &` (invisible du harness), et AUCUN polling
+   de `resultats.etat` : pendant une vague, faire le travail qui n'en
+   dépend pas (recherches, étape 6a `ref.json`), puis attendre la
+   notification de fin. `resultats.etat` (« i/n ») n'est qu'un filet
+   pour retrouver l'avancement après une compaction — le consulter au
+   plus une fois par tranche de ~10 minutes.
+   Lire `resultats.jsonl` une seule fois à la fin.
+   Un profil renvoyé SANS contenu exploitable sort
    en statut « vide » : échec technique, pas une information sur l'URL —
    le script de l'étape 5 le marque dans Détail et le laisse sans score
    (re-scrapé au run suivant via le reliquat) ; au 2e scrape vide il est
@@ -273,15 +299,11 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    (withResultObject=true) qui renvoie ~1000 tokens de logs par profil.
    ⚠️ `sleep` est bloqué par le harness : utiliser
    `python3 -c "import time; time.sleep(N)"` si besoin d'attendre.
-   ⚠️ Les commandes Bash basculent en tâche de fond au bout de 600 s :
-   ne jamais faire une longue attente bloquante — poller `resultats.etat`
-   par tranches de 5-8 minutes.
+   ⚠️ Les commandes Bash de PREMIER PLAN basculent d'office en tâche de
+   fond au bout de 600 s : ne jamais lancer une longue commande sans
+   `run_in_background`, ni faire une attente bloquante.
    ⚠️ Ne jamais `cat` un gros JSON dans le contexte : le lire via un
    script Python qui n'imprime qu'un résumé (comptes, échantillon).
-   ⚠️ Piège shell : `VAR=... && nohup cmd &` met TOUTE la chaîne en
-   tâche de fond et la variable est perdue — définir les variables sur
-   la même ligne que la commande (`VAR=... nohup cmd &`) ou avant, sans
-   enchaîner avec `&&`.
 
 5. **Contrôle d'identité (anti-homonymes)** — TOUS les profils scrapés,
    « Trouvé » compris, AVANT le scoring. La pire erreur du pipeline est
@@ -295,10 +317,10 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    et reçoit les cofondateurs de la même société (greffe + extrait de
    leur profil scrapé) : le recoupement d'équipe vaut aussi au
    contrôle. ~30-40 appels Sonnet/jour, quelques centimes.
-   `python3 -m robot.verif_identite resultats.jsonl contexte.jsonl verif`
+   `python3 -m robot.verif_identite /tmp/run_du_jour/resultats.jsonl /tmp/run_du_jour/contexte.jsonl /tmp/run_du_jour/verif`
    → `verif_ok.jsonl` (profils confirmés, entrée de l'étape 6) et
    `verif_maj.json` à pousser via
-   `python3 -m robot.airtable maj tblBngzHytB48MiDK verif_maj.json` :
+   `python3 -m robot.airtable maj tblBngzHytB48MiDK /tmp/run_du_jour/verif_maj.json` :
    homonymes écartés (retour en « À chercher » + Anomalie + URL exclue
    dans Détail ; au 2e homonyme écarté sur la même fiche, le script la
    passe en « Non trouvé » définitif — pas de boucle) et profils non
@@ -307,37 +329,42 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
 
 6. **Scoring déterministe** (tout scripté) :
    a. Lire la table Scoring UNE fois : `python3 -m robot.airtable lire
-      tblHdqhFxJsxSLFeR ref.json fldvdr7IADGRDYyG6 fldYH2QUzs5ewKsap`.
-   b. Avec le `contexte.jsonl` produit par robot.reliquat à l'étape 2 :
+      tblHdqhFxJsxSLFeR /tmp/run_du_jour/ref.json fldvdr7IADGRDYyG6 fldYH2QUzs5ewKsap`.
+   b. Avec le `contexte.jsonl` produit par robot.reliquat à l'étape 2
+      (tous les fichiers dans `/tmp/run_du_jour/`, chemins absolus) :
       `python3 -m robot.scorer_lot verif_ok.jsonl ref.json contexte.jsonl score`
       → `score_maj.json` (Score / Détail / Résumé / extrait JSON tronqué à
       2500 caractères, et « Non trouvé » + Anomalie pour les URLs mortes)
       et `score_a_noter.jsonl` (profils à score ≥ 1).
-   c. Pousser : `python3 -m robot.airtable maj tblBngzHytB48MiDK score_maj.json`.
+   c. Pousser : `python3 -m robot.airtable maj tblBngzHytB48MiDK /tmp/run_du_jour/score_maj.json`.
 
-7. **Note IA** : `python3 -m robot.note_ia score_a_noter.jsonl notes`
+7. **Note IA** : `python3 -m robot.note_ia /tmp/run_du_jour/score_a_noter.jsonl /tmp/run_du_jour/notes`
    (barème `robot/note_ia_prompt.md`, modèle = Sonnet le plus récent résolu
    automatiquement par `config.modele_ia` — rien à signaler à ce sujet,
    SAUF le repli sur le modèle par défaut marqué ⚠️ au lancement, qui
    est un mode dégradé à mentionner dans le rapport ; notation DURE ;
    reprise automatique si relancé) → pousser `notes_maj.json` via
-   `python3 -m robot.airtable maj tblBngzHytB48MiDK notes_maj.json`.
+   `python3 -m robot.airtable maj tblBngzHytB48MiDK /tmp/run_du_jour/notes_maj.json`.
 
-8. **Rapport** (modèle). Dans une session planifiée, personne ne lit le
-   terminal : le rapport doit partir par **PushNotification** (titre
-   court, ex. « Robot sourcing : N profils à examiner ») ET constituer le
-   message final de la session. Structure : entonnoir (bruts → gardés →
-   URLs → scrapés), coût Pappers + solde, profils à score ≥ 1 avec Note
-   IA et justification — GROUPÉS PAR SOCIÉTÉ (un deal s'évalue par équipe
-   de cofondateurs, pas par personne) —, anomalies — en NOMMANT les
-   profils concernés
+8. **Rapport** (digest scripté + rédaction modèle). D'abord
+   `python3 -m robot.rapport /tmp/run_du_jour` : le script émet le
+   digest déterministe — entonnoir chiffré, profils à score ≥ 1 avec
+   Note IA et justification GROUPÉS PAR SOCIÉTÉ (un deal s'évalue par
+   équipe de cofondateurs, pas par personne), anomalies NOMINATIVES
    (notamment les « non vérifiés » de l'étape 5, dont la fiche ne porte
-   que le drapeau : le rapport est le seul endroit où le motif apparaît).
-   Signaler aussi les profils notés sur un LinkedIn QUASI VIDE (moins de
-   5 des 16 champs remplis) : leur score et leur note sont fondés sur
-   presque rien — souvent le cas du fondateur en stealth qui ne touche
-   pas son profil, précisément celui qu'il ne faut pas rater sur un
-   malentendu. Ne rien relancer ensuite.
+   que le drapeau : le rapport est le seul endroit où le motif
+   apparaît), profils notés sur un LinkedIn QUASI VIDE (moins de 5 des
+   16 champs remplis : score et note fondés sur presque rien — souvent
+   le fondateur en stealth, précisément celui qu'il ne faut pas rater
+   sur un malentendu). Ne PAS refaire ces jointures à la main.
+   Le rôle du modèle est la RÉDACTION : transformer le digest en
+   rapport français lisible et y ajouter ce que le script ne voit pas
+   (coût Pappers + solde depuis la sortie de robot.run — l'alerte
+   solde < 50 EN TÊTE du rapport —, jetons du palier 3 consommés,
+   incidents de session). Dans une session planifiée, personne ne lit
+   le terminal : le rapport doit partir par **PushNotification** (titre
+   court, ex. « Robot sourcing : N profils à examiner ») ET constituer
+   le message final de la session. Ne rien relancer ensuite.
    Repère d'état utile : un champ « Score » rempli vaut marqueur « déjà
    traité » pour tout le pipeline aval.
 

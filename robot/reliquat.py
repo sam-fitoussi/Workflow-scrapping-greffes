@@ -14,6 +14,11 @@ sans aucune jointure ni parsing à la main :
                              Entreprises)
   contexte.jsonl             reliquat_fondateurs + les fichiers du jour
                              passés en argument — prêt pour les étapes 5-6
+  equipes.jsonl              une ligne par société à >= 2 cofondateurs
+                             dans contexte.jsonl : membres côte à côte
+                             (indices greffe, URLs déjà écartées) — le
+                             recoupement d'équipe, signal n°1 de la
+                             recherche, servi tout cuit
 
 Les fichiers du jour (motif daté `JJ-MM-AAAA_fondateurs.jsonl`, trouvés
 AUTOMATIQUEMENT dans <sortie_dir>) servent aussi d'exclusion : une fiche
@@ -109,9 +114,36 @@ def main(sortie_dir: str, fichiers_jour: list[str]) -> None:
                       for x in a_chercher]
     contexte = ctx_reliquat + ctx_a_chercher + lignes_jour
     ecrire("contexte.jsonl", contexte)
+
+    # equipes.jsonl : la vue par société. La recherche recoupe entre
+    # cofondateurs (villes personnelles, écoles, employeurs communs) — au
+    # lieu de reconstituer les équipes depuis des fichiers à plat, elles
+    # sont émises groupées, avec les URLs déjà écartées de chaque membre.
+    exclusions = {x["rec_id"]: x["urls_exclues"] for x in a_chercher if x["urls_exclues"]}
+    par_equipe: dict[str, list[dict]] = {}
+    for c in contexte:
+        if c.get("siren"):
+            par_equipe.setdefault(c["siren"], []).append(c)
+    equipes = []
+    for siren, membres in sorted(par_equipe.items()):
+        if len(membres) < 2:
+            continue
+        equipes.append({
+            "siren": siren,
+            "entreprise": membres[0].get("entreprise"),
+            "naf": membres[0].get("naf"),
+            "membres": [{"rec_id": m["rec_id"], "prenom": m.get("prenom"),
+                         "nom": m.get("nom"), "age": m.get("age"),
+                         "indices": m.get("indices") or {}}
+                        | ({"urls_exclues": exclusions[m["rec_id"]]}
+                           if m["rec_id"] in exclusions else {})
+                        for m in membres],
+        })
+    ecrire("equipes.jsonl", equipes)
     print(f"Reliquat : {len(a_chercher)} à re-chercher "
           f"(dont {sum(1 for x in a_chercher if x['urls_exclues'])} avec URLs à exclure), "
-          f"{len(a_scraper)} à re-scraper. contexte.jsonl : {len(contexte)} lignes.")
+          f"{len(a_scraper)} à re-scraper. contexte.jsonl : {len(contexte)} lignes ; "
+          f"equipes.jsonl : {len(equipes)} sociétés à cofondateurs.")
 
 
 if __name__ == "__main__":
