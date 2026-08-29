@@ -330,16 +330,18 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
 6. **Scoring déterministe** (tout scripté) :
    a. Lire la table Scoring UNE fois : `python3 -m robot.airtable lire
       tblHdqhFxJsxSLFeR /tmp/run_du_jour/ref.json fldvdr7IADGRDYyG6 fldYH2QUzs5ewKsap`.
-   b. Avec le `contexte.jsonl` produit par robot.reliquat à l'étape 2
-      (tous les fichiers dans `/tmp/run_du_jour/`, chemins absolus) :
-      `python3 -m robot.scorer_lot verif_ok.jsonl ref.json contexte.jsonl score`
+   b. Avec le `contexte.jsonl` produit par robot.reliquat à l'étape 2 :
+      `python3 -m robot.scorer_lot /tmp/run_du_jour/verif_ok.jsonl /tmp/run_du_jour/ref.json /tmp/run_du_jour/contexte.jsonl /tmp/run_du_jour/score`
       → `score_maj.json` (Score / Détail / Résumé / extrait JSON tronqué à
       2500 caractères, et « Non trouvé » + Anomalie pour les URLs mortes)
       et `score_a_noter.jsonl` (profils à score ≥ 1).
    c. Pousser : `python3 -m robot.airtable maj tblBngzHytB48MiDK /tmp/run_du_jour/score_maj.json`.
 
 7. **Note IA** : `python3 -m robot.note_ia /tmp/run_du_jour/score_a_noter.jsonl /tmp/run_du_jour/notes`
-   (barème `robot/note_ia_prompt.md`, modèle = Sonnet le plus récent résolu
+   (barème : source de vérité = table Prompts d'Airtable, relue à chaque
+   run — `robot/note_ia_prompt.md` n'est qu'une copie de secours, le
+   modifier est SANS EFFET tant qu'Airtable répond ;
+   modèle = Sonnet le plus récent résolu
    automatiquement par `config.modele_ia` — rien à signaler à ce sujet,
    SAUF le repli sur le modèle par défaut marqué ⚠️ au lancement, qui
    est un mode dégradé à mentionner dans le rapport ; notation DURE ;

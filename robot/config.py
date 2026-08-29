@@ -181,6 +181,15 @@ CHAMPS_PROFIL = [
     "linkedinFollowersCount", "linkedinConnectionsCount",
 ]
 
+
+def champs_remplis(profil: dict) -> int:
+    """Nombre de CHAMPS_PROFIL réellement renseignés — comptage unique,
+    partagé par la détection des scrapes vides (scraping_lot) et le
+    drapeau « profil quasi vide » (rapport). Un zéro (0 abonné,
+    0 relation) est la signature du profil délaissé, pas un contenu :
+    compté comme vide, au même titre que None, "" ou []."""
+    return sum(1 for k in CHAMPS_PROFIL if profil.get(k))
+
 # --- PhantomBuster (agents existants du compte) ---
 PHANTOM_URL_FINDER_ID = "6409925669476364"   # Deal Flow - Linkedin Profile URL Finder
 PHANTOM_SCRAPER_ID = "4668942683298432"      # Deal Flow - Linkedin Profile Scraper

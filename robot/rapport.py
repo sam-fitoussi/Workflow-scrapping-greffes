@@ -97,8 +97,7 @@ def main(dossier: str) -> None:
     # --- Profils à examiner, groupés par société (un deal = une équipe) ---
     resume_ix = {m["id"]: m["fields"].get(CF["resume"]) for m in score_maj}
     urls = {r["rec_id"]: r.get("url") for r in resultats}
-    remplis = {r["rec_id"]: sum(1 for k in config.CHAMPS_PROFIL
-                                if (r.get("profil") or {}).get(k) not in (None, "", []))
+    remplis = {r["rec_id"]: config.champs_remplis(r.get("profil") or {})
                for r in resultats if r.get("statut") == "ok"}
     par_siren: dict[str, list[str]] = {}
     for rid, c in contexte.items():
