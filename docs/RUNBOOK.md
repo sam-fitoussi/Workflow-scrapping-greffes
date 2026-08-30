@@ -327,11 +327,22 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    « Trouvé » ne sont plus exemptés (décision du 27/08) : au moment du
    « Trouvé » on n'a que des extraits de recherche ; le scraping
    apporte les dates réelles, et un « Trouvé » erroné passait sans
-   aucun filet. Le juge n'écarte que sur l'IDENTITÉ (naissance, dates,
-   domicile) — jamais sur le secteur quand l'identité est corroborée —
-   et reçoit les cofondateurs de la même société (greffe + extrait de
-   leur profil scrapé) : le recoupement d'équipe vaut aussi au
-   contrôle. ~30-40 appels Sonnet/jour, quelques centimes.
+   aucun filet. Doctrine du juge (alignée sur celle de la recherche,
+   décision du 30/08) : il ATTRAPE LES CONTRADICTIONS, il n'exige pas
+   les confirmations. Le candidat désigné est présumé correct ;
+   l'absence de corroboration est le cas NORMAL (LinkedIn n'affiche
+   presque jamais la naissance) et n'écarte jamais — pas plus qu'un
+   secteur ou une ville discordants, même combinés (un « Non trouvé »
+   n'est jamais inspecté par Samuel : mieux vaut un profil probable
+   scoré qu'une fiche enterrée). Écarter exige une CONTRADICTION
+   POSITIVE d'identité : dates du profil incompatibles avec l'âge du
+   greffe, ou profil établissant manifestement une autre personne. Un
+   profil gardé sans corroboration malgré des discordances porte la
+   mention « Identité non corroborée » dans Détail score — Samuel
+   tranche à l'œil, sans Anomalie. Le juge reçoit les cofondateurs de
+   la même société (greffe + extrait de leur profil scrapé) : le
+   recoupement d'équipe vaut aussi au contrôle. ~30-40 appels
+   Sonnet/jour, quelques centimes.
    `python3 -m robot.verif_identite /tmp/run_du_jour/resultats.jsonl /tmp/run_du_jour/contexte.jsonl /tmp/run_du_jour/verif`
    → `verif_ok.jsonl` (profils confirmés, entrée de l'étape 6) et
    `verif_maj.json` à pousser via
