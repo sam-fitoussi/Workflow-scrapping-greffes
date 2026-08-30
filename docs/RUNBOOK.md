@@ -118,6 +118,12 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
       « Rattrapage effectué le JJ/MM ») — rien à écrire à la main, et
       ne jamais créer une seconde ligne pour une date. Une date déjà
       rattrapée ne l'est à nouveau que si son total a encore augmenté.
+      Après un rattrapage, « Insérés » peut dépasser « Gardés » (vu le
+      30/08 : 72/70 sur le 26/08) : c'est NORMAL, pas une corruption —
+      « Gardés » est la photographie du dernier re-tirage, « Insérés »
+      le cumul de tous les passages, et une fiche insérée un jour peut
+      ne plus passer le filtre au re-tirage suivant (donnée greffe
+      modifiée). Ne rien « corriger ».
       Les fiches fondateurs regagnées par un rattrapage sont créées au
       jour du rattrapage : elles apparaissent dans les résultats du
       matin même (champ « Jour d'ajout ») et dans la Revue du jour —

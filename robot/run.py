@@ -222,11 +222,20 @@ def traiter_date(date_fr: str, entreprises_connues: dict[str, str], sirens_trait
         champs_journal[CJ["inseres"]] = (f.get(CJ["inseres"]) or 0) + stats["inseres"]
         champs_journal[CJ["jetons"]] = round((f.get(CJ["jetons"]) or 0) + stats["jetons"], 1)
         ajout = note_journal or f"Rattrapage effectué le {dt.date.today():%d/%m/%Y}."
-        champs_journal[CJ["notes"]] = ((f.get(CJ["notes"]) or "").rstrip() + " " + ajout).strip()
+        note = (f.get(CJ["notes"]) or "").rstrip()
+        if ajout not in note:  # relance le même jour : pas de mention en double
+            note = (note + " " + ajout).strip()
+        champs_journal[CJ["notes"]] = note
         airtable.mettre_a_jour(config.TABLE_JOURNAL,
                                [{"id": existante["id"], "fields": champs_journal}])
+        ligne = {"id": existante["id"], "fields": champs_journal}
     else:
-        airtable.inserer(config.TABLE_JOURNAL, [{"fields": champs_journal}])
+        ligne = airtable.inserer(config.TABLE_JOURNAL, [{"fields": champs_journal}])[0]
+    # L'index reflète toujours la ligne qui vient d'être écrite : une même
+    # date passée deux fois dans la même invocation cumule sur cette ligne
+    # au lieu de créer un doublon (ou d'écraser depuis des valeurs périmées).
+    if journal_existant is not None:
+        journal_existant[_iso(date_fr)] = ligne
     return stats
 
 
