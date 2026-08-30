@@ -130,7 +130,8 @@ def _fiche_fondateur(d: dict, e: dict, rec_entreprise: str) -> dict:
 
 
 def traiter_date(date_fr: str, entreprises_connues: dict[str, str], sirens_traites: set[str],
-                 sortie: pathlib.Path, note_journal: str = "") -> dict:
+                 sortie: pathlib.Path, note_journal: str = "",
+                 journal_existant: dict[str, dict] | None = None) -> dict:
     """Déroule tirage → filtres → insertion → Journal pour UNE date. Retourne les stats.
 
     Idempotent : un SIREN ne compte comme « traité » que si un FONDATEUR y est
@@ -200,8 +201,13 @@ def traiter_date(date_fr: str, entreprises_connues: dict[str, str], sirens_trait
              "gardes": len(gardes),
              "inseres": len(fondateurs), "jetons": round(jetons_avant - jetons_apres, 1)}
 
-    # Ligne du Journal écrite IMMÉDIATEMENT (jamais deux fois la même journée payée)
-    airtable.inserer(config.TABLE_JOURNAL, [{"fields": {
+    # Ligne du Journal écrite IMMÉDIATEMENT (jamais deux fois la même journée
+    # payée). UNE ligne par date : si la date figure déjà au Journal
+    # (rattrapage du dimanche), on met à jour la ligne existante au lieu d'en
+    # créer une seconde. Les totaux (bruts, cœur, gardés) sont des
+    # photographies du re-tirage complet -> écrasés ; « Insérés » et
+    # « Jetons » sont des compteurs propres à chaque run -> additionnés.
+    champs_journal = {
         CJ["date_traitee"]: _iso(date_fr),
         CJ["bruts"]: stats["bruts"],
         CJ["bruts_coeur"]: stats["bruts_coeur"],
@@ -209,7 +215,18 @@ def traiter_date(date_fr: str, entreprises_connues: dict[str, str], sirens_trait
         CJ["inseres"]: stats["inseres"],
         CJ["jetons"]: stats["jetons"],
         CJ["notes"]: note_journal or f"Run scripté du {dt.date.today():%d/%m/%Y}.",
-    }}])
+    }
+    existante = (journal_existant or {}).get(_iso(date_fr))
+    if existante:
+        f = existante["fields"]
+        champs_journal[CJ["inseres"]] = (f.get(CJ["inseres"]) or 0) + stats["inseres"]
+        champs_journal[CJ["jetons"]] = round((f.get(CJ["jetons"]) or 0) + stats["jetons"], 1)
+        ajout = note_journal or f"Rattrapage effectué le {dt.date.today():%d/%m/%Y}."
+        champs_journal[CJ["notes"]] = ((f.get(CJ["notes"]) or "").rstrip() + " " + ajout).strip()
+        airtable.mettre_a_jour(config.TABLE_JOURNAL,
+                               [{"id": existante["id"], "fields": champs_journal}])
+    else:
+        airtable.inserer(config.TABLE_JOURNAL, [{"fields": champs_journal}])
     return stats
 
 
@@ -267,8 +284,21 @@ def main() -> None:
     print(f"{len(entreprises_connues)} entreprises connues, "
           f"{len(sirens_traites)} SIREN avec fondateurs rattachés.")
 
+    # Index du Journal pour l'upsert des lignes (une ligne par date). En cas
+    # de doublon résiduel, viser la photographie la plus complète.
+    journal_existant: dict[str, dict] = {}
+    for r in airtable.lire_table(config.TABLE_JOURNAL,
+                                 [CJ["date_traitee"], CJ["bruts_coeur"],
+                                  CJ["inseres"], CJ["jetons"], CJ["notes"]]):
+        iso = r["fields"].get(CJ["date_traitee"])
+        deja = journal_existant.get(iso)
+        if iso and (not deja or (r["fields"].get(CJ["bruts_coeur"]) or 0)
+                    >= (deja["fields"].get(CJ["bruts_coeur"]) or 0)):
+            journal_existant[iso] = r
+
     for date_fr in args.dates:
-        stats = traiter_date(date_fr, entreprises_connues, sirens_traites, sortie, args.note)
+        stats = traiter_date(date_fr, entreprises_connues, sirens_traites, sortie,
+                             args.note, journal_existant)
         print(json.dumps(stats, ensure_ascii=False))
 
 

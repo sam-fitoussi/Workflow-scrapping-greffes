@@ -111,10 +111,17 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
       du Journal, même d'une unité. ⚠️ Comparer au sondage la colonne
       « Bruts cœur », JAMAIS « Dirigeants bruts » : le sondage ne voit que
       le cercle cœur, alors que « Dirigeants bruts » inclut la périphérie
-      — comparer à la mauvaise colonne rend le rattrapage aveugle. Mettre
-      à jour la ligne du Journal (nouveaux totaux + note « rattrapage
-      effectué le JJ/MM ») ; une date déjà rattrapée ne l'est à nouveau
-      que si son total a encore augmenté.
+      — comparer à la mauvaise colonne rend le rattrapage aveugle.
+      `robot.run` met à jour LUI-MÊME la ligne existante du Journal (une
+      seule ligne par date, toujours : totaux re-photographiés,
+      « Insérés » et « Jetons » additionnés à l'existant, note
+      « Rattrapage effectué le JJ/MM ») — rien à écrire à la main, et
+      ne jamais créer une seconde ligne pour une date. Une date déjà
+      rattrapée ne l'est à nouveau que si son total a encore augmenté.
+      Les fiches fondateurs regagnées par un rattrapage sont créées au
+      jour du rattrapage : elles apparaissent dans les résultats du
+      matin même (champ « Jour d'ajout ») et dans la Revue du jour —
+      c'est voulu.
 
 2. **Tirage + filtres + insertion + Journal** (tout-en-un, par date) :
    `python3 -m robot.run --dates <JJ-MM-AAAA> [...] --sortie /tmp/run_du_jour`
