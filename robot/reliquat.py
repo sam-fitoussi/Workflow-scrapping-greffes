@@ -9,11 +9,10 @@ sans aucune jointure ni parsing à la main :
                              tous deux extraits de « Détail score »
   reliquat_scrape.jsonl      {rec_id, url} : fiches Trouvé/Ambigu avec URL
                              mais SANS Score (le scraping n'a pas abouti)
-  reliquat_fondateurs.jsonl  contexte de ces fiches (nom, âge, ville,
-                             dénomination et activité via la table
-                             Entreprises)
-  contexte.jsonl             reliquat_fondateurs + les fichiers du jour
-                             passés en argument — prêt pour les étapes 5-6
+  contexte.jsonl             contexte de toutes ces fiches (nom, âge,
+                             ville, dénomination et activité via la table
+                             Entreprises) + les fichiers du jour — prêt
+                             pour les étapes 5-6
   equipes.jsonl              une ligne par société à >= 2 cofondateurs
                              dans contexte.jsonl : membres côte à côte
                              (indices greffe, URLs déjà écartées) — le
@@ -23,8 +22,8 @@ sans aucune jointure ni parsing à la main :
 Les fichiers du jour (motif daté `JJ-MM-AAAA_fondateurs.jsonl`, trouvés
 AUTOMATIQUEMENT dans <sortie_dir>) servent aussi d'exclusion : une fiche
 insérée par run.py aujourd'hui est encore « À chercher » mais n'est pas
-un reliquat. Le motif daté évite que `reliquat_fondateurs.jsonl` lui-même
-soit pris pour un fichier du jour lors d'une seconde invocation, et un
+un reliquat. Le motif daté évite que les autres .jsonl du répertoire
+soient pris pour des fichiers du jour lors d'une seconde invocation, et un
 jour sans date cible (zéro fichier) fonctionne normalement.
 
 Usage : python3 -m robot.reliquat <sortie_dir> [fondateurs_jour.jsonl ...]
@@ -106,7 +105,6 @@ def main(sortie_dir: str, fichiers_jour: list[str]) -> None:
 
     ecrire("reliquat_a_chercher.jsonl", a_chercher)
     ecrire("reliquat_scrape.jsonl", a_scraper)
-    ecrire("reliquat_fondateurs.jsonl", ctx_reliquat)
     # contexte.jsonl inclut AUSSI les « À chercher » : re-cherchés puis
     # scrapés dans le même run, ils arrivent au contrôle d'identité et à
     # la Note IA — sans leur contexte, le juge recevrait un greffe vide

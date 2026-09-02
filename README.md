@@ -19,7 +19,8 @@ runbook qui a raison, et ce README qui est en retard.
 | Chemin | Rôle |
 |---|---|
 | `docs/RUNBOOK.md` | LA procédure du run quotidien (autoportante) |
-| `docs/PILOTE.md` | Journal du pilote et enseignements |
+| `docs/PILOTE.md` | Enseignements du pilote initial (historique — pas une procédure) |
+| `docs/REVUE.md` | Procédure de la routine séparée « Robot Revue » (vue unique du matin) |
 | `robot/config.py` | Constantes : périmètre Pappers, filtres, IDs Airtable, plafonds |
 | `robot/pappers.py` | Tirage des immatriculations + filtres déterministes |
 | `robot/run.py` | Orchestrateur : sondage, tirage, insertion, Journal |
@@ -28,7 +29,10 @@ runbook qui a raison, et ce README qui est en retard.
 | `robot/scraping_lot.py` | Boucle de scraping PhantomBuster en tâche de fond |
 | `robot/verif_identite.py` | Contrôle anti-homonymes des profils scrapés |
 | `robot/scorer_lot.py` | Scoring déterministe + payloads de mise à jour |
-| `robot/note_ia.py` | Note IA sur 20 (barème `robot/note_ia_prompt.md`) |
+| `robot/note_ia.py` | Note IA sur 20 (barème dans la table Prompts d'Airtable ; `robot/note_ia_prompt.md` n'est que la copie de secours) |
+| `robot/rapport.py` | Digest déterministe du run pour le rapport final |
+| `robot/scoring.py`, `robot/phantoms.py` | Briques : matching du référentiel, pilotage PhantomBuster |
+| `robot/revue.py` | Robot Revue (routine séparée, voir `docs/REVUE.md`) |
 
 Le modèle (session Claude planifiée) n'intervient qu'aux deux endroits où
 le jugement compte : la recherche des profils LinkedIn et le rapport
