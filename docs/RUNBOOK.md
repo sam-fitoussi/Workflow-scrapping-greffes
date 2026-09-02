@@ -96,8 +96,11 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    a. Sonder UNIQUEMENT les dates absentes du Journal :
       `python3 -m robot.run --sonde --auto`
       (le script lit le Journal LUI-MÊME — inutile de le lire avant —,
-      en exclut les dates traitées et calcule la profondeur ; 0,1 jeton
-      par date sondée. `--sauf`/`--jours` restent disponibles pour
+      en exclut les dates traitées et remonte jusqu'à la plus ancienne
+      date du Journal, 21 jours au plus ; ce qui précède le Journal
+      n'est jamais sondé, c'est voulu ; 0,1 jeton par date sondée. S'il
+      signale des jours ouvrés non traités hors fenêtre, les reprendre
+      dans le rapport. `--sauf`/`--jours` restent disponibles pour
       forcer à la main).
    b. Dates cibles = celles avec `total > 0` SANS ligne au Journal. S'il
       n'y en a aucune : NE PAS tirer chez Pappers, mais dérouler quand

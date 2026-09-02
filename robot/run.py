@@ -264,14 +264,21 @@ def main() -> None:
                     dates.append(dt.date(int(a), int(m), int(j)))
             sauf = {d.strftime("%d-%m-%Y") for d in dates}
             # Profondeur : jusqu'à la plus ancienne date du Journal (les trous
-            # entre deux dates traitées sont ainsi couverts), bornée à 7-14 j
+            # entre deux dates traitées sont ainsi couverts), bornée à 7-21 j
+            # (même fenêtre que le rattrapage du dimanche). Ce qui précède le
+            # Journal n'est jamais sondé : décision manuelle, voulu.
             brut = (dt.date.today() - min(dates)).days if dates else 7
-            jours = min(14, max(7, brut))
+            jours = min(21, max(7, brut))
             print(f"--auto : {len(sauf)} dates du Journal exclues, profondeur {jours} jours")
-            if brut > 14:
-                print(f"⚠️ Fenêtre plafonnée à 14 jours alors que la plus ancienne date "
-                      f"du Journal remonte à {brut} jours : des dates plus anciennes ne "
-                      f"seront ni sondées ni rattrapées — le signaler dans le rapport.")
+            # N'alerter que sur un trou réel : jours ouvrés jamais traités, plus
+            # anciens que la fenêtre mais postérieurs au démarrage du pipeline
+            trous = [d for d in (dt.date.today() - dt.timedelta(days=i)
+                                 for i in range(jours + 1, brut))
+                     if d.weekday() < 5 and d not in dates]
+            if trous:
+                print("⚠️ Jours ouvrés sans ligne au Journal, hors fenêtre de sondage : "
+                      + ", ".join(d.strftime("%d-%m-%Y") for d in sorted(trous))
+                      + " — à sonder à la main (--sonde --jours N) si on veut les rattraper.")
         print(json.dumps(sonder(jours, sauf), ensure_ascii=False, indent=1))
         return
 
