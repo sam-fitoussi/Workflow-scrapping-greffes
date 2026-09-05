@@ -33,8 +33,8 @@ regarde chaque matin, groupée par « Jour », filtrée sur « Vu » décoché.
 
 ## Le run quotidien
 
-1. `git fetch origin claude/vc-founder-prospecting-workflow-5qfbdr`
-   puis checkout de cette branche (le repo est déjà cloné).
+1. `git fetch origin main` puis checkout de `main` (le repo est déjà
+   cloné ; `main` est la branche de production).
 2. `python3 -m robot.revue` — idempotent : les fiches sources déjà
    liées dans Revue sont ignorées, relancer ne crée aucun doublon.
    La clé est dans `AIRTABLE_API_KEY` (variables d'environnement).
