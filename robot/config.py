@@ -190,9 +190,9 @@ def champs_remplis(profil: dict) -> int:
     compté comme vide, au même titre que None, "" ou []."""
     return sum(1 for k in CHAMPS_PROFIL if profil.get(k))
 
-# --- PhantomBuster (agents existants du compte) ---
-PHANTOM_URL_FINDER_ID = "6409925669476364"   # Deal Flow - Linkedin Profile URL Finder
-PHANTOM_SCRAPER_ID = "4668942683298432"      # Deal Flow - Linkedin Profile Scraper
+# --- PhantomBuster (workspace « Samuel's workspace », compte LinkedIn de
+# Samuel connecté via l'extension ; bascule du 16/09/2026) ---
+PHANTOM_SCRAPER_ID = "4413122660053115"      # Robot sourcing - LinkedIn Profile Scraper
 # Plafond de profils scrapés par jour. PhantomBuster indique 1000-1500/jour
 # sans risque sur un compte LinkedIn standard ; 300 garde une marge x3-5
 # (compte partagé avec d'autres automatisations). Toujours séquentiel.

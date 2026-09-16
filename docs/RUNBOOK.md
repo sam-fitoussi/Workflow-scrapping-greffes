@@ -71,7 +71,9 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
     `fldI248T6i6a9qvYA`=Détail score · `fldcCc78Gb1WGWoUL`=Résumé profil ·
     `fldDARjR1pwhcxxxM`=Note IA · `fldyQkdNmlJWjLXxv`=Justification ·
     `flddifOPKnUCBSfC4`=Anomalie · `fldEFrlCmXUUXVKPb`=Vu.
-- PhantomBuster : Profile Scraper `4668942683298432` (l'URL Finder est retiré).
+- PhantomBuster : Profile Scraper `4413122660053115` (workspace de Samuel,
+  son compte LinkedIn connecté ; si tous les scrapes sortent en « erreur »,
+  c'est le cookie LinkedIn à reconnecter dans PhantomBuster — le signaler).
 - Clés API (`PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT),
   `ROBOT_ANTHROPIC_API_KEY`, `PHANTOMBUSTER_API_KEY`) : leur place est
   dans les **variables d'environnement de l'environnement d'exécution**
