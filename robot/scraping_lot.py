@@ -23,6 +23,11 @@ Un objet renvoyé mais SANS contenu exploitable (moins de 2 des champs
 utiles remplis — un compteur à zéro compte comme vide, cf.
 config.champs_remplis) sort en statut "vide" : re-scrapé une fois au run
 suivant, puis traité comme une adresse périmée.
+Un profil que le Phantom SAUTE parce qu'il l'a déjà traité (« All leads
+have been processed », déduplication du mode fileMgmt "mix") sort en
+statut "deja_traite" : ce n'est PAS une URL morte — la fiche n'est pas
+touchée et repart en reliquat. Le réglage du Phantom est vérifié au
+lancement (alerte à reprendre EN TÊTE du rapport).
 
 Usage :
     python3 -m robot.scraping_lot file.jsonl resultats [cap]
@@ -46,6 +51,12 @@ def scraper_file(fichier_file: str, prefixe_sortie: str, cap: int = config.SCRAP
     if not config.PHANTOMBUSTER_API_KEY:
         raise SystemExit("PHANTOMBUSTER_API_KEY absent : sans elle chaque profil "
                          "sortirait en 401/erreur. Piloter le Phantom via le MCP à la place.")
+    try:
+        alerte = phantoms.verifier_reglages()
+    except Exception as e:
+        alerte = f"⚠️ Réglages du Profile Scraper non vérifiables : {str(e)[:150]}"
+    if alerte:
+        print(alerte)
     deja = _rec_ids_deja_traites(prefixe_sortie)
     reste = max(0, cap - len(deja))
     taches = [t for t in (json.loads(l) for l in open(fichier_file) if l.strip())
@@ -69,6 +80,9 @@ def scraper_file(fichier_file: str, prefixe_sortie: str, cap: int = config.SCRAP
             else:
                 ligne["statut"] = "ok"
                 ligne["profil"] = p
+        except phantoms.ProfilDejaTraite as e:
+            ligne["statut"] = "deja_traite"  # jamais une URL morte : fiche intacte
+            ligne["erreur"] = str(e)[:300]
         except Exception as e:  # on continue la file, l'erreur est tracée
             ligne["statut"] = "erreur"
             ligne["erreur"] = str(e)[:300]

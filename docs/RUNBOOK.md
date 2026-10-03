@@ -74,6 +74,10 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
 - PhantomBuster : Profile Scraper `4413122660053115` (workspace de Samuel,
   son compte LinkedIn connecté ; si tous les scrapes sortent en « erreur »,
   c'est le cookie LinkedIn à reconnecter dans PhantomBuster — le signaler).
+  Le Phantom DOIT être réglé sur « Delete previous files » (fileMgmt
+  `delete`) : sinon il saute en silence tout profil déjà scrapé une fois
+  (« All leads have been processed »). `robot.scraping_lot` vérifie ce
+  réglage au lancement et l'alerte ⚠️ éventuelle va EN TÊTE du rapport.
 - Clés API (`PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT),
   `ROBOT_ANTHROPIC_API_KEY`, `PHANTOMBUSTER_API_KEY`) : leur place est
   dans les **variables d'environnement de l'environnement d'exécution**
@@ -297,7 +301,11 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    en cache) — l'étape 5 renvoie la fiche en « À chercher », adresse
    exclue, pour retrouver le profil ACTUEL de la même personne. Un
    profil renvoyé quasi vide sort en « vide » : re-scrapé une fois au
-   run suivant, puis même traitement. Rien à faire à la main.
+   run suivant, puis même traitement. Un profil que le Phantom SAUTE
+   parce qu'il l'a déjà traité sort en « deja_traite » : ce n'est PAS une
+   URL morte, la fiche n'est pas touchée et repart en reliquat (alerte en
+   tête du rapport : régler « Delete previous files »). Rien à faire à la
+   main.
    Plafond strict : 300 profils/jour (config.SCRAPE_DAILY_CAP —
    PhantomBuster annonce 1000-1500/jour sans risque, on garde une marge
    x3-5 car le compte LinkedIn est partagé), appliqué par le script. À

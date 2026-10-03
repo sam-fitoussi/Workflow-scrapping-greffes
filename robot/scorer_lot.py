@@ -16,6 +16,8 @@ Sorties (préfixe donné en argument) :
 
 Les statuts "erreur" ne sont PAS mis à jour : la fiche reste sans score et
 repart en reliquat au run suivant (une seule relance, cf. RUNBOOK).
+Les statuts "deja_traite" (profil sauté par la déduplication du Phantom)
+non plus : la fiche reste intacte, jamais enterrée en URL morte.
 
 Usage :
     python3 -m robot.scorer_lot resultats.jsonl ref.json contexte.jsonl sortie
@@ -58,7 +60,7 @@ def main(f_resultats: str, f_ref: str, f_contexte: str, prefixe: str) -> None:
             contexte[c["rec_id"]] = c
 
     maj, a_noter = [], []
-    stats = {"ok": 0, "mort": 0, "erreur": 0, "score>=1": 0}
+    stats = {"ok": 0, "mort": 0, "erreur": 0, "deja_traite": 0, "score>=1": 0}
     aujourd_hui = dt.date.today().strftime("%d/%m")
 
     for l in open(f_resultats):
@@ -67,6 +69,9 @@ def main(f_resultats: str, f_ref: str, f_contexte: str, prefixe: str) -> None:
         r = json.loads(l)
         if r["statut"] == "erreur":
             stats["erreur"] += 1  # reliquat : une seule relance au run suivant
+            continue
+        if r["statut"] == "deja_traite":
+            stats["deja_traite"] += 1  # fiche intacte, reprise au run suivant
             continue
         if r["statut"] == "mort":
             stats["mort"] += 1
