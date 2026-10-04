@@ -11,8 +11,13 @@ Reprise : relancer avec le MÊME préfixe de sortie (un préfixe par jour).
 Les rec_id déjà présents dans <sortie>.jsonl sont sautés et comptent dans
 le plafond — le cap (config.SCRAPE_DAILY_CAP) est donc bien quotidien,
 pas par invocation.
-Une URL morte (aucun résultat) sort en statut "mort" : le RUNBOOK
-demande alors « Non trouvé » + Anomalie (fait par robot/scorer_lot.py).
+Un Phantom terminé SANS aucun résultat est un plantage (cookie LinkedIn
+expiré, limitation), pas une URL morte : statut "erreur", fiche intacte,
+reprise en reliquat. Après config.SCRAPE_ERREURS_MAX erreurs (ou scrapes
+vides) d'affilée, le lot s'arrête : le reste n'est pas tenté (alerte).
+Échéance : passé config.SCRAPE_ECHEANCE_MIN minutes, le lot s'arrête
+proprement entre deux profils (une commande de fond est coupée à 2 h) ;
+relancer la même commande reprend là où il s'est arrêté.
 Un profil que PhantomBuster déclare introuvable (« No Linkedin profile
 found ») sort en statut "perimee" : l'adresse LinkedIn a changé (LinkedIn
 ne redirige pas les anciennes adresses personnalisées, mais l'index de
@@ -64,7 +69,18 @@ def scraper_file(fichier_file: str, prefixe_sortie: str, cap: int = config.SCRAP
     print(f"{len(deja)} déjà scrapés, {len(taches)} à faire (plafond {cap}).")
 
     sortie = open(f"{prefixe_sortie}.jsonl", "a")
+    echeance = time.time() + config.SCRAPE_ECHEANCE_MIN * 60
+    erreurs_suite = 0
     for i, t in enumerate(taches, 1):
+        if time.time() > echeance:
+            print(f"⏱️ Échéance de {config.SCRAPE_ECHEANCE_MIN} min atteinte : {len(taches) - i + 1} "
+                  "profil(s) restant(s) — relancer la MÊME commande (reprise automatique).")
+            break
+        if erreurs_suite >= config.SCRAPE_ERREURS_MAX:
+            print(f"⛔ Scraping arrêté après {erreurs_suite} erreurs consécutives : vérifier le cookie "
+                  f"LinkedIn dans PhantomBuster. {len(taches) - i + 1} profil(s) non tentés, intacts "
+                  "(repris au prochain run).")
+            break
         ligne = {"rec_id": t["rec_id"], "url": t["url"]}
         try:
             profil = phantoms.scraper_profil(t["url"])
@@ -86,6 +102,7 @@ def scraper_file(fichier_file: str, prefixe_sortie: str, cap: int = config.SCRAP
         except Exception as e:  # on continue la file, l'erreur est tracée
             ligne["statut"] = "erreur"
             ligne["erreur"] = str(e)[:300]
+        erreurs_suite = erreurs_suite + 1 if ligne["statut"] in ("erreur", "vide") else 0
         sortie.write(json.dumps(ligne, ensure_ascii=False) + "\n")
         sortie.flush()
         open(f"{prefixe_sortie}.etat", "w").write(f"{len(deja) + i}/{len(deja) + len(taches)}")

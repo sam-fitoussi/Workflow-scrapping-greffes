@@ -72,8 +72,11 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
     `fldDARjR1pwhcxxxM`=Note IA · `fldyQkdNmlJWjLXxv`=Justification ·
     `flddifOPKnUCBSfC4`=Anomalie · `fldEFrlCmXUUXVKPb`=Vu.
 - PhantomBuster : Profile Scraper `4413122660053115` (workspace de Samuel,
-  son compte LinkedIn connecté ; si tous les scrapes sortent en « erreur »,
-  c'est le cookie LinkedIn à reconnecter dans PhantomBuster — le signaler).
+  son compte LinkedIn connecté ; si les scrapes sortent en « erreur »
+  — le lot s'arrête de lui-même après 3 erreurs d'affilée, message ⛔ —
+  c'est le cookie LinkedIn à reconnecter dans PhantomBuster : le signaler
+  EN TÊTE du rapport ; les fiches non scrapées restent intactes et
+  repartent en reliquat).
   Le Phantom DOIT être réglé sur « Delete previous files » (fileMgmt
   `delete`) : sinon il saute en silence tout profil déjà scrapé une fois
   (« All leads have been processed »). `robot.scraping_lot` vérifie ce
@@ -318,8 +321,8 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
      c'est sûr par construction. (Les recherches par lots durent
      ~10 minutes : inutile d'intercaler des débuts de vague au fil de
      l'eau.)
-   Tâche de fond = le paramètre `run_in_background` de l'outil Bash —
-   le harness suit la commande et RÉVEILLE la session quand elle se
+   Tâche de fond = le paramètre `run_in_background` de l'outil Bash,
+   avec `timeout: 7200000` (2 h, le maximum) — le harness suit la commande et RÉVEILLE la session quand elle se
    termine. Jamais `nohup … &` (invisible du harness), et AUCUN polling
    de `resultats.etat` : pendant une vague, faire le travail qui n'en
    dépend pas (recherches, étape 6a `ref.json`), puis attendre la
@@ -342,7 +345,12 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    PhantomBuster annonce 1000-1500/jour sans risque, on garde une marge
    x3-5 car le compte LinkedIn est partagé), appliqué par le script. À
    ~38 s par profil, une journée pleine peut prendre jusqu'à ~3h10 de
-   scraping : le lancer TÔT dans le run, en tâche de fond. (En cas de
+   scraping : le lancer TÔT dans le run, en tâche de fond. Une commande
+   de fond étant coupée à 2 h, le script s'arrête de lui-même au bout de
+   105 min (config.SCRAPE_ECHEANCE_MIN), entre deux profils, avec le
+   message « ⏱️ Échéance … atteinte » : relancer alors la MÊME commande,
+   en tâche de fond — elle reprend là où elle s'est arrêtée (autant de
+   fois que nécessaire, le plafond quotidien reste appliqué). (En cas de
    relance dans la MÊME session — après compaction par exemple — les
    rec_id déjà scrapés sont sur disque, sautés, et comptent dans le
    plafond : la reprise est sûre). Le compteur ne survit pas à la

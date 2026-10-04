@@ -197,6 +197,11 @@ PHANTOM_SCRAPER_ID = "4413122660053115"      # Robot sourcing - LinkedIn Profile
 # sans risque sur un compte LinkedIn standard ; 300 garde une marge x3-5
 # (compte partagé avec d'autres automatisations). Toujours séquentiel.
 SCRAPE_DAILY_CAP = 300
+# Une commande de fond est coupée à 2 h : scraping_lot s'arrête proprement
+# avant, entre deux profils (le runbook le relance une fois, reprise par rec_id).
+SCRAPE_ECHEANCE_MIN = 105
+# Erreurs techniques d'affilée avant d'arrêter le lot (cookie LinkedIn expiré ?)
+SCRAPE_ERREURS_MAX = 3
 
 # --- Périmètre Pappers ---
 # Formes juridiques : SAS (5710) et SASU (5720)

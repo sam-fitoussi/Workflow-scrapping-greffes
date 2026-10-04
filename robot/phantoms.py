@@ -89,7 +89,12 @@ def _scraper_profil(url_profil: str, timeout_s: int) -> list[dict] | None:
                 raise ProfilDejaTraite(
                     f"PhantomBuster a sauté ce profil, déjà traité par le Phantom "
                     f"(container {container_id}) : régler « Delete previous files »")
-            return None
+            # Aucun résultat : c'est un plantage du Phantom (cookie LinkedIn
+            # expiré, limitation…), PAS une URL morte — une adresse inexistante
+            # renvoie un objet « No LinkedIn profile found ». Erreur technique :
+            # la fiche reste intacte et repart en reliquat.
+            raise RuntimeError(f"Phantom terminé sans résultat (container {container_id}) : "
+                               "plantage probable, vérifier le cookie LinkedIn")
     raise TimeoutError(f"Scraping non terminé après {timeout_s}s (container {container_id})")
 
 
