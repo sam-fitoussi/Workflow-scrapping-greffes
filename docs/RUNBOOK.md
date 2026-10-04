@@ -432,7 +432,7 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    rapport français lisible et y ajouter ce que le script ne voit pas
    (coût Pappers + solde depuis la sortie de robot.run — l'alerte
    solde < 50 EN TÊTE du rapport —, jetons du palier 3 consommés,
-   incidents de session). Dans une session planifiée, personne ne lit
+   nombre d'adresses LinkedIn devinées, incidents de session). Dans une session planifiée, personne ne lit
    le terminal : le rapport doit partir par **PushNotification** (titre
    court, ex. « Robot sourcing : N profils à examiner ») ET constituer
    le message final de la session. Ne rien relancer ensuite.
