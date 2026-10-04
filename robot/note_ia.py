@@ -86,7 +86,10 @@ def noter(profil_ligne: dict, system: str) -> dict:
             # thinking adaptatif par défaut sur Sonnet 5+ : les tokens de
             # réflexion comptent dans max_tokens — 300 tronquerait la réponse
             "max_tokens": 4000,
-            "system": system,
+            # Barème fixe pour tout le run : mis en cache (lectures à ~10 % du prix,
+            # cache de 5 min rafraîchi à chaque appel).
+            "system": [{"type": "text", "text": system,
+                        "cache_control": {"type": "ephemeral"}}],
             "messages": [{"role": "user", "content": user}],
         }).encode(),
         headers={

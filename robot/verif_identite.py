@@ -152,7 +152,10 @@ def verifier(ligne: dict, contexte: dict) -> dict:
         data=json.dumps({
             "model": config.modele_ia(),
             "max_tokens": 4000,  # thinking adaptatif compris — 2000 risquait la troncature
-            "system": SYSTEM,
+            # Consignes fixes pour tout le run : mises en cache (lectures à ~10 % du prix,
+            # cache de 5 min rafraîchi à chaque appel).
+            "system": [{"type": "text", "text": SYSTEM,
+                        "cache_control": {"type": "ephemeral"}}],
             "messages": [{"role": "user", "content": user}],
         }).encode(),
         headers={"x-api-key": config.ANTHROPIC_API_KEY,
