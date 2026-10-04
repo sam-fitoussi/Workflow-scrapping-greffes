@@ -18,7 +18,8 @@ BASE = "https://api.pappers.fr/v2"
 
 
 def _call(endpoint: str, params: dict) -> dict:
-    """Appel Pappers avec retry : tirage_du_jour fait 26 requêtes par date, et
+    """Appel Pappers avec retry : tirage_du_jour fait 26 requêtes par date (plus
+    les pages suivantes au-delà de 100 résultats), et
     un seul 500 transitoire au milieu ferait re-payer toute la date au run
     suivant (pas de ligne de Journal) — exactement ce que le Journal doit
     empêcher."""
@@ -52,6 +53,30 @@ def jetons_restants() -> float:
     )
 
 
+PAR_PAGE = 100  # plafond de l'API par page : au-delà, il FAUT paginer
+
+
+def _recherche_complete(endpoint: str, params: dict) -> list[dict]:
+    """Tous les résultats d'une recherche, page par page.
+
+    Sans pagination, une journée à plus de PAR_PAGE dirigeants était
+    silencieusement tronquée (28/09/2026 : 136 au sondage, 100 tirés), et le
+    rattrapage du dimanche la re-tirait chaque semaine sans jamais rien
+    regagner. Coût inchangé : 0,1 jeton par résultat retourné, quelle que
+    soit la page. On s'arrête sur `total` atteint ou sur une page incomplète
+    (garde-fou si `total` bouge pendant le tirage)."""
+    resultats: list[dict] = []
+    page = 1
+    while True:
+        d = _call(endpoint, {**params, "par_page": PAR_PAGE, "page": page})
+        lot = d.get("resultats") or []
+        resultats.extend(lot)
+        if len(lot) < PAR_PAGE or len(resultats) >= (d.get("total") or 0):
+            return resultats
+        page += 1
+        time.sleep(0.3)
+
+
 def tirage_du_jour(date_immat: str) -> list[dict]:
     """Récupère les dirigeants des sociétés immatriculées au RCS le jour donné.
 
@@ -64,25 +89,28 @@ def tirage_du_jour(date_immat: str) -> list[dict]:
         "date_immatriculation_rcs_max": date_immat,
         "categorie_juridique": config.CATEGORIES_JURIDIQUES,
         "type_dirigeant": "physique",
-        "par_page": 100,
     }
 
     resultats = []
     vus = set()
-    coeur = _call("recherche-dirigeants", {**commun, "code_naf": ",".join(config.NAF_COEUR)})
-    for r in coeur["resultats"]:
-        vus.add((r.get("nom"), r.get("prenom"), r.get("date_de_naissance")))
+    coeur = _recherche_complete("recherche-dirigeants",
+                                {**commun, "code_naf": ",".join(config.NAF_COEUR)})
+    for r in coeur:
+        cle = (r.get("nom"), r.get("prenom"), r.get("date_de_naissance"))
+        if cle in vus:  # filet si l'ordre bouge d'une page à l'autre
+            continue
+        vus.add(cle)
         r["_cercle"] = "Cœur"
         resultats.append(r)
 
     # La périphérie se déduplique contre le cœur ET entre mots-clés
     for kw in config.MOTS_CLES_OBJET_SOCIAL:
-        d = _call("recherche-dirigeants", {
+        lot = _recherche_complete("recherche-dirigeants", {
             **commun,
             "code_naf": ",".join(config.NAF_PERIPHERIE),
             "objet_social": kw,
         })
-        for r in d["resultats"]:
+        for r in lot:
             cle = (r.get("nom"), r.get("prenom"), r.get("date_de_naissance"))
             if cle in vus:
                 continue

@@ -133,6 +133,11 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
       le cumul de tous les passages, et une fiche insérée un jour peut
       ne plus passer le filtre au re-tirage suivant (donnée greffe
       modifiée). Ne rien « corriger ».
+      Le tirage est paginé (100 résultats par page, `robot/pappers.py`) :
+      une date à plus de 100 dirigeants cœur est récupérée en entier. Avant
+      ce correctif (04/10/2026), « Bruts cœur » plafonnait à 100 — une ligne
+      du Journal à exactement 100 avec un sondage supérieur est une date
+      tronquée, que le rattrapage complète normalement.
       Les fiches fondateurs regagnées par un rattrapage sont créées au
       jour du rattrapage : elles apparaissent dans les résultats du
       matin même (champ « Jour d'ajout ») et dans la Revue du jour —
