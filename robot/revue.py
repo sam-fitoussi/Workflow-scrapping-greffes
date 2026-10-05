@@ -20,10 +20,20 @@ slug, liens, et quelques champs de confort figés à la découverte).
 Idempotent : une fiche source déjà liée dans Revue n'est jamais retraitée ;
 relancer le script ne crée aucun doublon. État durable = Airtable seul.
 
-Usage : python3 -m robot.revue
+Un canal peut porter un « filtre » (champ, valeur) : seules ses fiches qui
+le satisfont entrent dans Revue (Sales Navigator : Signal startup = 1 —
+les autres fiches ne portent aucun signal de création d'entreprise).
+
+Usage : python3 -m robot.revue                 (run quotidien)
+        python3 -m robot.revue --essai         (à blanc : rien n'est écrit)
+        python3 -m robot.revue --historique    (rattrapage ponctuel quand un
+            canal est branché : chaque ligne est datée du jour d'ajout de sa
+            fiche source au lieu du jour du run, pour ne pas noyer le groupe
+            du matin sous l'historique)
 """
 
 import datetime as dt
+import sys
 import zoneinfo
 
 from . import airtable, config
@@ -32,20 +42,28 @@ PARIS = zoneinfo.ZoneInfo("Europe/Paris")
 CR = config.CHAMPS_REVUE
 CE = config.CHAMPS_ENTREPRISES
 # Priorité des canaux pour les champs de confort (nom, société…)
-ORDRE = ["Pappers", "Evertrace", "The Veck FR", "The Veck INT"]
+ORDRE = list(config.CANAUX_REVUE)
+# Clés d'un canal qui désignent des champs à lire (les autres sont de la
+# configuration : table, lien, filtre)
+CHAMPS_LUS = ("slug", "nom", "societe", "siren", "role", "ville", "url", "resume", "date")
 
 
 def _lignes_canal(nom_canal: str, denominations: dict[str, str]) -> list[dict]:
     """Les fiches examinables d'un canal : {rec_id, slug, nom, ...}."""
     c = config.CANAUX_REVUE[nom_canal]
-    champs = [v for k, v in c.items() if k != "table" and k != "lien" and v]
+    filtre = c.get("filtre")
+    champs = [c[k] for k in CHAMPS_LUS if c.get(k)]
     champs.append(config.VU_SOURCES_REVUE[nom_canal])
+    if filtre:
+        champs.append(filtre[0])
     lignes = []
     for r in airtable.lire_table(c["table"], champs):
         f = r["fields"]
         slug = f.get(c["slug"])
         if not slug:
             continue  # pas de profil LinkedIn identifié : pas examinable
+        if filtre and f.get(filtre[0]) != filtre[1]:
+            continue  # hors du périmètre Revue de ce canal
         societe = (denominations.get(f.get(c["siren"])) if c["siren"]
                    else f.get(c["societe"]))
         lignes.append({
@@ -55,26 +73,37 @@ def _lignes_canal(nom_canal: str, denominations: dict[str, str]) -> list[dict]:
             "url": f.get(c["url"]),
             "resume": f.get(c["resume"]) if c["resume"] else None,
             "vu": bool(f.get(config.VU_SOURCES_REVUE[nom_canal])),
+            "date": _jour_paris(f.get(c["date"])) if c.get("date") else None,
         })
     return lignes
 
 
-def main() -> None:
+def _jour_paris(horodatage: str | None) -> str | None:
+    """AAAA-MM-JJ (heure de Paris) d'un horodatage ISO Airtable ou d'une date."""
+    if not horodatage:
+        return None
+    if len(horodatage) == 10:
+        return horodatage
+    t = dt.datetime.fromisoformat(horodatage.replace("Z", "+00:00"))
+    return t.astimezone(PARIS).strftime("%Y-%m-%d")
+
+
+def main(essai: bool = False, historique: bool = False) -> None:
     jour_du_run = dt.datetime.now(PARIS).strftime("%Y-%m-%d")
     liens = {canal: config.CANAUX_REVUE[canal]["lien"] for canal in ORDRE}
 
     # 1. État actuel de la Revue : fiches sources déjà liées + index des
-    #    lignes du jour (pour une seconde exécution le même jour)
+    #    lignes par (slug, jour) (seconde exécution le même jour, rattrapage)
     deja_liees: set[str] = set()
-    index_du_jour: dict[str, dict] = {}
+    index_lignes: dict[tuple[str, str], dict] = {}
     revue = airtable.lire_table(config.TABLE_REVUE,
                                 [CR["slug"], CR["jour"]] + list(liens.values()))
     for r in revue:
         f = r["fields"]
         for fld in liens.values():
             deja_liees.update(f.get(fld) or [])
-        if f.get(CR["slug"]) and f.get(CR["jour"]) == jour_du_run:
-            index_du_jour[f[CR["slug"]]] = {
+        if f.get(CR["slug"]) and f.get(CR["jour"]):
+            index_lignes[(f[CR["slug"]], f[CR["jour"]])] = {
                 "id": r["id"],
                 "liens": {c: list(f.get(fld) or []) for c, fld in liens.items()},
             }
@@ -102,7 +131,11 @@ def main() -> None:
     multi_canaux = 0
     for slug, lignes in groupes.items():
         lignes.sort(key=lambda l: ORDRE.index(l["canal"]))
-        existant = index_du_jour.get(slug)
+        # Jour de la ligne : date du run ; en rattrapage historique, le plus
+        # ancien jour d'ajout des fiches du groupe (à défaut, date du run)
+        jour = (min((l["date"] for l in lignes if l["date"]), default=jour_du_run)
+                if historique else jour_du_run)
+        existant = index_lignes.get((slug, jour))
         if existant:
             nouveaux = dict(existant["liens"])
             for l in lignes:
@@ -115,7 +148,7 @@ def main() -> None:
         if len({l["canal"] for l in lignes}) > 1:
             multi_canaux += 1
         champs = {
-            CR["nom"]: premier["nom"], CR["jour"]: jour_du_run, CR["slug"]: slug,
+            CR["nom"]: premier["nom"], CR["jour"]: jour, CR["slug"]: slug,
             CR["societe"]: next((l["societe"] for l in lignes if l["societe"]), None),
             CR["role"]: next((l["role"] for l in lignes if l["role"]), None),
             CR["ville"]: next((l["ville"] for l in lignes if l["ville"]), None),
@@ -130,11 +163,18 @@ def main() -> None:
             champs[CR["vu"]] = True
         creations.append({"fields": {k: v for k, v in champs.items() if v is not None}})
 
-    if majs:
-        airtable.mettre_a_jour(config.TABLE_REVUE, majs)
-    if creations:
-        airtable.inserer(config.TABLE_REVUE, creations)
+    if essai:
+        print("ESSAI À BLANC — rien n'est écrit dans Airtable.")
+    else:
+        if majs:
+            airtable.mettre_a_jour(config.TABLE_REVUE, majs)
+        if creations:
+            airtable.inserer(config.TABLE_REVUE, creations)
     ventilation = " · ".join(f"{c} {n}" for c, n in par_canal.items())
+    if historique:
+        jours = sorted(c["fields"][CR["jour"]] for c in creations)
+        print(f"Rattrapage historique : lignes datées du {jours[0]} au {jours[-1]}"
+              if jours else "Rattrapage historique : rien à créer.")
     print(f"Revue du {jour_du_run} : {len(creations)} lignes créées — {ventilation}"
           + (f" (dont {multi_canaux} multi-canaux)" if multi_canaux else "")
           + (f" ; {len(majs)} lignes du jour complétées" if majs else "")
@@ -142,4 +182,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(essai="--essai" in sys.argv, historique="--historique" in sys.argv)
