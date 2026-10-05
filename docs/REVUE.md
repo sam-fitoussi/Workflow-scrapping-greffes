@@ -10,9 +10,10 @@ Repo en LECTURE SEULE : jamais de commit ni de push.
 
 L'onglet **Revue** (`tblcAnzoiOw7qt8WA`) de la base « Sourcing -
 principal » (`appdJUoNvhEi5jsJr`) agrège les fondateurs EXAMINABLES
-(profil LinkedIn identifié) des 4 tables sources — Fondateurs (Pappers),
-Fondateurs (Evertrace), France (The Veck), International (The Veck) —
-en une ligne par profil découvert par le run, dédoublonnée par slug
+(profil LinkedIn identifié) des 5 tables sources — Fondateurs (Pappers),
+Fondateurs (Evertrace), France (The Veck), International (The Veck),
+Sales Navigator (uniquement ses fiches à Signal startup = 1 : les autres
+ne portent aucun signal de création d'entreprise) — en une ligne par profil découvert par le run, dédoublonnée par slug
 LinkedIn. « Jour » = la DATE DU RUN (heure de Paris), pas une date lue
 dans le canal : tout ce qui apparaît dans la Revue apparaît dans le
 groupe du matin où Samuel va le lire, y compris les fiches arrivées la
@@ -39,16 +40,17 @@ regarde chaque matin, groupée par « Jour », filtrée sur « Vu » décoché.
    liées dans Revue sont ignorées, relancer ne crée aucun doublon.
    La clé est dans `AIRTABLE_API_KEY` (variables d'environnement).
 3. Lire la sortie du script : « Revue du AAAA-MM-JJ : N lignes créées —
-   Pappers X · Evertrace Y · The Veck FR Z · The Veck INT W. »
+   Pappers X · Evertrace Y · The Veck FR Z · The Veck INT W ·
+   Sales Navigator S. »
    N = les nouveaux profils de ce matin, tous datés du jour du run, et
-   X+Y+Z+W = N (chaque ligne est attribuée à son canal principal ; les
+   X+Y+Z+W+S = N (chaque ligne est attribuée à son canal principal ; les
    profils remontés par plusieurs canaux comptent une fois et sont
    signalés « dont k multi-canaux »). Il n'y a rien à reconstituer ni
    à ventiler soi-même. Zéro création est NORMAL si les canaux n'ont
    rien remonté — ce n'est pas une erreur.
 4. Terminer par une PushNotification d'UNE ligne qui recopie cette
    sortie : « Revue : N nouveaux profils ce matin (Pappers X ·
-   Evertrace Y · The Veck FR Z · The Veck INT W) » — ou la description
+   Evertrace Y · The Veck FR Z · The Veck INT W · Sales Navigator S) » — ou la description
    du blocage si le script a échoué. Le silence n'est jamais
    acceptable.
 
@@ -63,3 +65,24 @@ regarde chaque matin, groupée par « Jour », filtrée sur « Vu » décoché.
   (`TABLE_REVUE`, `CHAMPS_REVUE`, `CANAUX_REVUE`, `VU_SOURCES_REVUE`).
 - Ne jamais toucher aux automatisations Airtable ni aux onglets
   miroirs ; ne jamais écrire dans les tables sources.
+
+## Brancher un nouveau canal (procédure suivie pour Sales Navigator)
+
+1. Synchroniser la table source dans « Sourcing - principal », en mode
+   bidirectionnel, depuis une vue sans filtre (faite par Samuel dans
+   l'interface ; le champ « Vu » doit être modifiable).
+2. Sur le miroir, créer les champs LOCAUX « Slug LinkedIn » et
+   « Vu récent » (mêmes formules que les autres canaux).
+3. Dans Revue : lien vers le miroir, lookups « · Vu », « · Note IA »,
+   « · Note présente », « · Justif », et étendre les formules Note IA,
+   Justification, Canal et « Vu (sources) ».
+4. Automatisations : une paire « Vu : X → Y » dans chaque sens avec
+   chaque canal existant, une « Arrivée déjà vue » pour le nouveau
+   canal, un « findRecords » de plus dans chaque « Arrivée déjà vue »
+   existante, une branche de plus dans « Revue : Vu cliqué → fiches
+   sources ». Créées/modifiées en brouillon : Samuel active et publie.
+5. Rattrapage « Vu » ponctuel dans les bases d'origine (les
+   automatisations ne réagissent qu'aux changements), puis entrée dans
+   `config.CANAUX_REVUE` / `VU_SOURCES_REVUE` et
+   `python3 -m robot.revue --historique` (historique daté de ses vrais
+   jours) AVANT le prochain run quotidien.

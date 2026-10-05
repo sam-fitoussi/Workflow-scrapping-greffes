@@ -147,12 +147,26 @@ CANAUX_REVUE = {
         "role": "fldY8fActQC9M56qV", "ville": "fldvopfGFV4040ecp",
         "url": "fldMwAIZbkxpdj6nf", "resume": "fldrU1YQqBo04plxx",
     },
+    # Miroir synchronisé de la base « Sourcing Sales Navigator ». Seules les
+    # fiches à Signal startup = 1 entrent dans Revue (décision de Samuel :
+    # les autres ne portent aucun signal de création d'entreprise) ; la
+    # propagation « Vu » s'applique, elle, à toutes les fiches.
+    "Sales Navigator": {
+        "table": "tblUTjK6z7Ge44oOf", "lien": "fld7dwUu1XDm0UKXU",
+        "slug": "fldMuzUTQBfoM6d3f", "nom": "fldnzUX1Y98nbE1FO",
+        "societe": "fld1ZJU6OoDiL1MRh", "siren": None,
+        "role": "fldUEYbfsPJcMdnSo", "ville": "fldPjITT80kqiqn1P",
+        "url": "fldMA4raCRrVKGkIK", "resume": "fldSemEz518AzUQ5Y",
+        "date": "fldss8tjLTyqc9BZg",  # Date d'ajout (rattrapage --historique)
+        "filtre": ("fldPfV6KrwQvLgbip", 1),  # Signal startup
+    },
 }
 # Champs « Vu » des 4 tables sources (pour marquer une ligne Revue déjà vue
 # dès sa création, sans dépendre de l'ordre d'activation des automatisations)
 VU_SOURCES_REVUE = {
     "Pappers": "fldEFrlCmXUUXVKPb", "Evertrace": "fldtqIag2QHUovJOm",
     "The Veck FR": "fldzzgO6aNt9EBxmy", "The Veck INT": "fldM0T13qJo1HLF9e",
+    "Sales Navigator": "fldfGwEQU6wY9JVth",
 }
 
 CHAMPS_SCORING = {
