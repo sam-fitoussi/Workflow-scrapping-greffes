@@ -17,6 +17,14 @@ Les informations affichées dans Revue sont des lookups qui suivent les
 fiches sources en direct ; le script n'écrit que l'ossature (nom, jour,
 slug, liens, et quelques champs de confort figés à la découverte).
 
+Nouveau signal sur un profil NON VU : quand Evertrace fusionne un nouveau
+signal dans une fiche déjà liée (moins de 15 jours après le précédent, note
+« nouveau signal le JJ/MM »), la ligne Revue est redatée du jour du run —
+le profil remonte dans le groupe du matin (règle de Samuel : un second
+signal = un projet qui avance). Jamais si la ligne ou une de ses fiches
+sources est déjà vue. (Au-delà de 15 jours, Evertrace crée une nouvelle
+fiche : nouvelle ligne Revue, cas déjà couvert ci-dessus.)
+
 Idempotent : une fiche source déjà liée dans Revue n'est jamais retraitée ;
 relancer le script ne crée aucun doublon. État durable = Airtable seul.
 
@@ -33,6 +41,7 @@ Usage : python3 -m robot.revue                 (run quotidien)
 """
 
 import datetime as dt
+import re
 import sys
 import zoneinfo
 
@@ -45,7 +54,8 @@ CE = config.CHAMPS_ENTREPRISES
 ORDRE = list(config.CANAUX_REVUE)
 # Clés d'un canal qui désignent des champs à lire (les autres sont de la
 # configuration : table, lien, filtre)
-CHAMPS_LUS = ("slug", "nom", "societe", "siren", "role", "ville", "url", "resume", "date")
+CHAMPS_LUS = ("slug", "nom", "societe", "siren", "role", "ville", "url", "resume", "date",
+              "signal")
 
 
 def _lignes_canal(nom_canal: str, denominations: dict[str, str]) -> list[dict]:
@@ -74,8 +84,23 @@ def _lignes_canal(nom_canal: str, denominations: dict[str, str]) -> list[dict]:
             "resume": f.get(c["resume"]) if c["resume"] else None,
             "vu": bool(f.get(config.VU_SOURCES_REVUE[nom_canal])),
             "date": _jour_paris(f.get(c["date"])) if c.get("date") else None,
+            "signal": _dernier_signal(f.get(c["signal"])) if c.get("signal") else None,
         })
     return lignes
+
+
+def _dernier_signal(notes: str | None) -> str | None:
+    """AAAA-MM-JJ du dernier « nouveau signal le JJ/MM » des notes (année
+    déduite : la plus récente qui ne soit pas dans le futur)."""
+    aujourd_hui = dt.datetime.now(PARIS).date()
+    dates = []
+    for j, m in re.findall(r"nouveau signal le (\d{2})/(\d{2})", notes or ""):
+        try:
+            d = dt.date(aujourd_hui.year, int(m), int(j))
+        except ValueError:
+            continue
+        dates.append(d if d <= aujourd_hui else d.replace(year=d.year - 1))
+    return max(dates).isoformat() if dates else None
 
 
 def _jour_paris(horodatage: str | None) -> str | None:
@@ -97,7 +122,7 @@ def main(essai: bool = False, historique: bool = False) -> None:
     deja_liees: set[str] = set()
     index_lignes: dict[tuple[str, str], dict] = {}
     revue = airtable.lire_table(config.TABLE_REVUE,
-                                [CR["slug"], CR["jour"]] + list(liens.values()))
+                                [CR["slug"], CR["jour"], CR["vu"]] + list(liens.values()))
     for r in revue:
         f = r["fields"]
         for fld in liens.values():
@@ -116,11 +141,29 @@ def main(essai: bool = False, historique: bool = False) -> None:
 
     # 3. Nouvelles fiches examinables, groupées par slug (dédup du run)
     groupes: dict[str, list[dict]] = {}
+    sources: dict[str, dict] = {}
     for canal in ORDRE:
         for l in _lignes_canal(canal, denominations):
+            sources[l["rec_id"]] = l
             if l["rec_id"] in deja_liees:
                 continue
             groupes.setdefault(l["slug"], []).append(l)
+
+    # 3b. Nouveau signal sur un profil NON VU : la ligne remonte au jour du run
+    remontees = []
+    if not historique:
+        for r in revue:
+            f = r["fields"]
+            recs = [sources[x] for fld in liens.values() for x in f.get(fld) or [] if x in sources]
+            signal = max((l["signal"] for l in recs if l["signal"]), default=None)
+            vue = f.get(CR["vu"]) or any(l["vu"] for l in recs)
+            jour = f.get(CR["jour"])
+            if signal and jour and signal > jour and jour < jour_du_run and not vue:
+                remontees.append({"id": r["id"], "fields": {CR["jour"]: jour_du_run}})
+                if f.get(CR["slug"]):  # une fiche du même profil arrivée ce jour la complète
+                    index_lignes[(f[CR["slug"]], jour_du_run)] = {
+                        "id": r["id"],
+                        "liens": {c: list(f.get(fld) or []) for c, fld in liens.items()}}
 
     # 4. Créations (et compléments si seconde exécution le même jour).
     # Ventilation par canal PRINCIPAL de chaque ligne créée : la somme des
@@ -166,6 +209,8 @@ def main(essai: bool = False, historique: bool = False) -> None:
     if essai:
         print("ESSAI À BLANC — rien n'est écrit dans Airtable.")
     else:
+        if remontees:
+            airtable.mettre_a_jour(config.TABLE_REVUE, remontees)
         if majs:
             airtable.mettre_a_jour(config.TABLE_REVUE, majs)
         if creations:
@@ -178,6 +223,7 @@ def main(essai: bool = False, historique: bool = False) -> None:
     print(f"Revue du {jour_du_run} : {len(creations)} lignes créées — {ventilation}"
           + (f" (dont {multi_canaux} multi-canaux)" if multi_canaux else "")
           + (f" ; {len(majs)} lignes du jour complétées" if majs else "")
+          + (f" ; {len(remontees)} profils non vus remontés (nouveau signal)" if remontees else "")
           + ".")
 
 

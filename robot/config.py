@@ -132,6 +132,9 @@ CANAUX_REVUE = {
         "societe": "fldHd5nMMarZXJfBr", "siren": None,
         "role": "fldYLO4a0f1QvbUSP", "ville": "fld5sIZkwdRiW8Ryn",
         "url": "fldi3bz9aD7JKllBO", "resume": None,
+        # Notes robot : « nouveau signal le JJ/MM » quand Evertrace FUSIONNE
+        # un signal dans la fiche (< 15 j après le précédent) — cf. revue.py
+        "signal": "fld2PlypCqoMWE6cp",
     },
     "The Veck FR": {
         "table": "tblVJTIAezbM0Ab3H", "lien": "fldHxjvsEVyA3M3tx",
