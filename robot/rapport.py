@@ -175,14 +175,19 @@ def main(dossier: str) -> None:
     for r in resultats:
         if r["statut"] in ("vide", "perimee"):
             st_maj = maj_ix.get(r["rec_id"], {}).get(CF["statut"])
+            devinee = "Adresse devinée inexistante" in (
+                maj_ix.get(r["rec_id"], {}).get(CF["detail"]) or "").split(" | ")[-1]
             if st_maj == "Non trouvé":
-                suite = "2e adresse périmée : recherche ABANDONNÉE"
+                suite = "2e adresse en échec : recherche ABANDONNÉE"
+            elif st_maj == "À chercher" and devinee:
+                suite = "devinette fausse — une autre variante au prochain run"
             elif st_maj == "À chercher":
                 suite = ("adresse LinkedIn périmée (même personne, adresse changée) — "
                          "re-recherche de son profil actuel au prochain run")
             else:
                 suite = "scrape vide (1re fois) — re-scrape au prochain run"
-            label = "URL périmée" if r["statut"] == "perimee" else "Scrape vide"
+            label = ("Adresse devinée inexistante" if devinee
+                     else "URL périmée" if r["statut"] == "perimee" else "Scrape vide")
             lignes_anomalies.append(f"- {label} : {nom_de(r['rec_id'])} ({r.get('url')}) — {suite}")
         elif r["statut"] == "deja_traite":
             lignes_anomalies.append(

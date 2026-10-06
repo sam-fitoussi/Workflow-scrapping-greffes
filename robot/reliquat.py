@@ -95,7 +95,8 @@ def main(sortie_dir: str, fichiers_jour: list[str]) -> None:
                 "siren": f.get(CF["siren_cible"]), "indices": indices}
         if statut == "À chercher":
             urls = re.findall(r"https?://[^\s)|]+", detail)
-            perimees = [u for seg in detail.split(" | ") if "URL périmée" in seg
+            perimees = [u for seg in detail.split(" | ")
+                        if "URL périmée" in seg or "Adresse devinée inexistante" in seg
                         for u in re.findall(r"https?://[^\s)|]+", seg)]
             a_chercher.append(base | {"urls_exclues": urls}
                               | ({"urls_perimees": perimees} if perimees else {}))

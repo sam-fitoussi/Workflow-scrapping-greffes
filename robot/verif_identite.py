@@ -233,7 +233,8 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
     # (anti-boucle) ne dépend d'aucune clé posée à la main.
     try:
         fiches = {r["id"]: r["fields"]
-                  for r in airtable.lire_table(config.TABLE_FONDATEURS, [CF["detail"]])}
+                  for r in airtable.lire_table(config.TABLE_FONDATEURS,
+                                               [CF["detail"], CF["methode"]])}
     except SystemExit as e:
         print(f"⚠️ Détails Airtable illisibles ({e}) : contrôle SANS historique "
               f"d'exclusions (une fiche au 2e homonyme peut reboucler). "
@@ -293,19 +294,28 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
                 # chercher » pour retrouver le profil ACTUEL de la même
                 # personne, adresse exclue. Anti-boucle : au 2e épisode sur la
                 # même fiche, abandon.
-                motif = ("PhantomBuster ne trouve plus ce profil" if statut == "perimee"
-                         else "2e scrape vide")
-                message = ((deja + " | " if deja else "")
-                           + f"URL périmée le {aujourd_hui} ({url}) : {motif} — même "
-                             "personne, adresse changée : chercher son profil actuel.")
-                if "URL périmée" in deja:
+                # Adresse DEVINÉE introuvable : la devinette était fausse, ce
+                # n'est pas un changement d'adresse — marqueur distinct, pour
+                # ne pas laisser croire à une panne du scraper.
+                devinee = (statut == "perimee" and fiches.get(ligne["rec_id"], {})
+                           .get(CF["methode"]) == "URL devinée")
+                if devinee:
+                    marqueur = (f"Adresse devinée inexistante le {aujourd_hui} ({url}) — "
+                                "devinette fausse, pas un changement d'adresse.")
+                else:
+                    motif = ("PhantomBuster ne trouve plus ce profil" if statut == "perimee"
+                             else "2e scrape vide")
+                    marqueur = (f"URL périmée le {aujourd_hui} ({url}) : {motif} — même "
+                                "personne, adresse changée : chercher son profil actuel.")
+                message = (deja + " | " if deja else "") + marqueur
+                if "URL périmée" in deja or "Adresse devinée inexistante" in deja:
                     abandons += 1
                     maj.append({"id": ligne["rec_id"], "fields": {
                         CF["statut"]: "Non trouvé",
                         CF["linkedin_url"]: "",
                         CF["anomalie"]: True,
                         CF["score"]: 0,
-                        CF["detail"]: message + " 2e adresse périmée : abandon de la recherche.",
+                        CF["detail"]: message + " 2e adresse en échec : abandon de la recherche.",
                     }})
                 else:
                     perimees += 1
@@ -362,7 +372,7 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
           + (f" ({n_req} écartement(s) requalifié(s) par le garde-fou)" if n_req else "") + ", "
           f"{n_nv} non vérifiés (Anomalie cochée), {vides} scrapes vides à "
           f"reprendre demain, {perimees} adresses périmées renvoyées en recherche, "
-          f"{abandons} abandons (2e adresse périmée).")
+          f"{abandons} abandons (2e adresse en échec).")
 
 
 if __name__ == "__main__":
