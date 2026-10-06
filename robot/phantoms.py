@@ -128,7 +128,12 @@ def rechercher_noms(requetes: list[str], timeout_s: int = 6600) -> list[dict]:
             if not brut:
                 raise RuntimeError(f"Recherche par nom terminée sans résultat (container "
                                    f"{container_id}) : plantage probable, vérifier le cookie LinkedIn")
-            return json.loads(brut)
+            res = json.loads(brut)
+            if isinstance(res, dict) and res.get("jsonUrl"):
+                # gros lot : PhantomBuster ne renvoie que le lien du fichier
+                with urllib.request.urlopen(res["jsonUrl"]) as r:
+                    res = json.load(r)
+            return res
     raise TimeoutError(f"Recherche par nom non terminée après {timeout_s}s (container {container_id})")
 
 
