@@ -148,7 +148,8 @@ def main(f_recherches: str, dossier: str) -> None:
             continue
         statut, r = choix
         e["fields"][CF["statut"]] = statut
-        e["fields"][CF["linkedin_url"]] = "https://www.linkedin.com/in/" + _slug(r["defaultProfileUrl"])
+        e["fields"][CF["linkedin_url"]] = ("https://www.linkedin.com/in/"
+                                           + urllib.parse.quote(_slug(r["defaultProfileUrl"])))
         e["fields"][CF["methode"]] = METHODE
         trouves += statut == "Trouvé"
         ambigus += statut == "Ambigu"
