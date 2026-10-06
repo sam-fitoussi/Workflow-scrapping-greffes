@@ -18,10 +18,12 @@ fiche repart sur le candidat suivant, adresse exclue) :
     « Allan B. »), hors adresses déjà exclues ;
   - un seul candidat → « Trouvé », même nom courant, même hors de France ;
   - la société du greffe dans son poste ou son entreprise → « Trouvé » ;
-  - sinon le plus probable parmi ceux en France (titre de fondateur, puis
-    ville du siège ou du dirigeant) → « Ambigu » ; si AUCUN n'est en
-    France, « Non trouvé » (cent homonymes à l'étranger : un tirage au
-    hasard).
+  - sinon le plus probable (en France, puis titre de fondateur, puis ville
+    du siège ou du dirigeant) → « Ambigu », dès qu'il est un peu plus
+    probable que les autres, ou s'il reste au plus 3 candidats
+    indiscernables (une chance sur 3 au moins : on tente, le 1er de
+    LinkedIn). Au-delà (beaucoup d'homonymes indiscernables) : « Non
+    trouvé ».
   Ne PAS exiger la société : un fondateur du premier jour n'a souvent pas
   encore mis son profil à jour.
 
@@ -93,7 +95,8 @@ def _en_france(r: dict) -> bool:
 def _score(c: dict, r: dict) -> int:
     villes = {_norm(c.get("ville")), _norm((c.get("indices") or {}).get("ville_dirigeant"))} - {""}
     lieu = _norm(r.get("location"))
-    return (2 * bool(FONDATEUR.search(r.get("title") or ""))
+    return (3 * _en_france(r)
+            + 2 * bool(FONDATEUR.search(r.get("title") or ""))
             + 1 * any(v in lieu for v in villes))
 
 
@@ -107,10 +110,10 @@ def choisir(c: dict, resultats: list[dict], exclues: set[str]) -> tuple[str, dic
     concordants = [r for r in cands if _societe_concorde(c, r)]
     if concordants:
         return "Trouvé", concordants[0]
-    en_france = [r for r in cands if _en_france(r)]
-    if not en_france:
-        return None
-    return "Ambigu", max(en_france, key=lambda r: _score(c, r))  # à égalité : l'ordre de LinkedIn
+    notes = sorted((_score(c, r) for r in cands), reverse=True)
+    if notes[0] > notes[1] or notes.count(notes[0]) <= 3:
+        return "Ambigu", max(cands, key=lambda r: _score(c, r))  # à égalité : l'ordre de LinkedIn
+    return None
 
 
 def main(f_recherches: str, dossier: str) -> None:
