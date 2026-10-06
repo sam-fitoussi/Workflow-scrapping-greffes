@@ -207,6 +207,7 @@ def champs_remplis(profil: dict) -> int:
 # --- PhantomBuster (workspace « Samuel's workspace », compte LinkedIn de
 # Samuel connecté via l'extension ; bascule du 16/09/2026) ---
 PHANTOM_SCRAPER_ID = "4413122660053115"      # Robot sourcing - LinkedIn Profile Scraper
+PHANTOM_RECHERCHE_NOM_ID = "737480332830394"  # Robot sourcing - Recherche par nom (Sales Navigator Search Export)
 # Plafond de profils scrapés par jour. PhantomBuster indique 1000-1500/jour
 # sans risque sur un compte LinkedIn standard ; 300 garde une marge x3-5
 # (compte partagé avec d'autres automatisations). Toujours séquentiel.

@@ -98,6 +98,40 @@ def _scraper_profil(url_profil: str, timeout_s: int) -> list[dict] | None:
     raise TimeoutError(f"Scraping non terminé après {timeout_s}s (container {container_id})")
 
 
+def rechercher_noms(requetes: list[str], timeout_s: int = 6600) -> list[dict]:
+    """Recherche Sales Navigator « Prénom Nom », toutes les requêtes en UN
+    lancement (~30 s par requête). Renvoie les résultats bruts du Phantom
+    (champ `query` = la requête d'origine, `defaultProfileUrl` = adresse
+    publique /in/…). La recherche interne de LinkedIn voit les profils que
+    les moteurs de recherche n'indexent pas (récents, nom masqué « Allan B. »
+    hors réseau, adresse changée)."""
+    launch = _call("agents/launch", {
+        "id": config.PHANTOM_RECHERCHE_NOM_ID,
+        "manualLaunch": True,
+        # le compte LinkedIn (identité) est celui réglé dans le Phantom
+        "bonusArgument": {
+            "queries": requetes,
+            "numberOfResultsPerSearch": 10,
+            "numberOfProfiles": 10 * len(requetes),
+            "removeDuplicateProfiles": False,
+            "watcherMode": False,
+            "csvName": "recherche_nom",
+        },
+    })
+    container_id = launch["containerId"]
+    debut = time.time()
+    while time.time() - debut < timeout_s:
+        time.sleep(30)
+        if _call("containers/fetch", params={"id": container_id}).get("status") == "finished":
+            brut = _call("containers/fetch-result-object",
+                         params={"id": container_id}).get("resultObject")
+            if not brut:
+                raise RuntimeError(f"Recherche par nom terminée sans résultat (container "
+                                   f"{container_id}) : plantage probable, vérifier le cookie LinkedIn")
+            return json.loads(brut)
+    raise TimeoutError(f"Recherche par nom non terminée après {timeout_s}s (container {container_id})")
+
+
 def verifier_reglages() -> str | None:
     """Renvoie une alerte si le Profile Scraper n'est pas en mode « Delete
     previous files » (sinon il saute les profils déjà scrapés), None sinon."""

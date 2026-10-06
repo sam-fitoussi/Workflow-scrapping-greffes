@@ -265,35 +265,18 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    un candidat au hasard coûte un scrape puis une exclusion, et fait
    reboucler la fiche jusqu'au 2e homonyme pour rien. « Non trouvé »
    aussi quand la recherche ne donne rien.
-   **Identité établie mais aucune URL : DEVINER l'adresse.** La
-   recherche web ne voit que les profils LinkedIn indexés par le moteur
-   (profils récents, peu actifs ou à visibilité restreinte absents),
-   alors que le profil existe souvent à l'adresse évidente — cas réel :
-   Baptiste Huvelle (HORAMA), identifié par la presse CES 2026, classé
-   « Non trouvé » faute d'URL, alors que `linkedin.com/in/baptiste-huvelle`
-   existait. Quand l'enquête a ÉTABLI l'identité (site de la société,
-   presse, page équipe, annuaire d'école, cofondateur recoupé… — pas un
-   simple nom sans indice) mais qu'aucune adresse `/in/…` n'est sortie,
-   ne PAS conclure « Non trouvé » : poser l'adresse devinée
-   `https://www.linkedin.com/in/<prenom-nom>` (prénom d'usage et nom
-   d'usage s'ils existent, en minuscules, sans accents, espaces et
-   apostrophes remplacés par des tirets — ex. `jean-baptiste-thebaut-fries`),
-   jamais une URL de `urls_exclues` / `urls_perimees`. Statut « Trouvé »,
-   méthode « URL devinée » (traçabilité : le rapport final indique
-   combien d'adresses ont été devinées). Inutile de tenter d'ouvrir l'adresse (LinkedIn
-   renvoie 999 hors connexion) : la vérification est faite par le
-   pipeline. Le scraping passe par le compte LinkedIn de Samuel ; une
-   adresse inexistante sort en « perimee » et la fiche revient en
-   « À chercher » (adresse exclue) — on peut alors deviner UNE variante
-   (`prenomnom`, `p-nom`, nom composé sans tiret…) ; au 2e échec,
-   `verif_identite` passe la fiche en « Non trouvé » définitif : la
-   boucle est bornée à deux scrapes. Si l'adresse existe mais appartient
-   à un homonyme, le contrôle d'identité de l'étape 5 l'écarte comme
-   n'importe quel candidat. Sans identité établie (nom courant, aucun
-   indice), pas de devinette : « Non trouvé ».
+   **Les « Non trouvé » passent ensuite par la recherche Sales
+   Navigator** (`robot.recherche_nom`, ci-dessous) : la recherche web ne
+   voit que les profils indexés par les moteurs, alors que la recherche
+   interne de LinkedIn voit aussi les profils récents, ceux dont le nom
+   est masqué hors réseau (« Allan B. ») et ceux dont l'adresse a
+   changé — au test, 7 fondateurs sur 12 retrouvés là où la recherche
+   web, la devinette d'adresse et Surfe n'en trouvaient aucun. Ne plus
+   deviner d'adresse : si Sales Navigator ne trouve personne, l'adresse
+   n'existe vraisemblablement pas.
    Pas de relance des non-trouvés (sauf échec technique : une seule
-   relance le lendemain). Écrire les résultats dans un JSON de
-   cette forme exacte, puis `python3 -m robot.airtable maj tblBngzHytB48MiDK` :
+   relance le lendemain). Écrire les résultats dans
+   `/tmp/run_du_jour/recherches.json`, de cette forme exacte :
    ```json
    [{"id": "<rec_id>", "fields": {
        "flddKwLMI63aBsSZQ": "Trouvé",
@@ -301,8 +284,17 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
        "fldgf0zCUWs3jT2qB": "Recherche web"}}]
    ```
    (champs : statut « Trouvé / Ambigu / Non trouvé » ; URL LinkedIn, à
-   omettre si non trouvé ; méthode : « Recherche web », ou « URL devinée »
-   pour une adresse devinée). Pour une fiche qui était en Anomalie
+   omettre si non trouvé ; méthode : « Recherche web »). Puis, UNE FOIS
+   LA VAGUE 1 TERMINÉE (le compte LinkedIn ne supporte pas deux Phantoms
+   à la fois), en tâche de fond comme le scraping (~30 s par fiche) :
+   `python3 -m robot.recherche_nom /tmp/run_du_jour/recherches.json /tmp/run_du_jour`
+   — le script cherche les « Non trouvé » par « Prénom Nom », retient le
+   candidat le plus probable (règle de Samuel : tenter plutôt
+   qu'enterrer, le contrôle de l'étape 5 tranche) et réécrit le fichier
+   (méthode « Recherche Sales Nav »). Ne pas re-trier ses choix à la
+   main. Enfin `python3 -m robot.airtable maj tblBngzHytB48MiDK /tmp/run_du_jour/recherches.json`.
+   Si le script échoue, pousser le fichier tel quel (les « Non trouvé »
+   restent non trouvés) et le signaler dans le rapport. Pour une fiche qui était en Anomalie
    « homonyme écarté » et dont la re-recherche aboutit (nouveau candidat
    trouvé) : ajouter `"flddifOPKnUCBSfC4": false` au payload — l'anomalie
    est résolue, on décoche (en gardant « Détail score » intact : c'est
@@ -315,7 +307,7 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
      recherches, elle n'en dépend pas) :
      `python3 -m robot.scraping_lot /tmp/run_du_jour/reliquat_scrape.jsonl /tmp/run_du_jour/resultats`
    - **Vague 2 — les URLs du jour, une fois TOUTES les recherches
-     faites** : écrire la file JSONL (`{"rec_id", "url"}` par ligne) et
+     faites** (recherche Sales Navigator comprise) : écrire la file JSONL (`{"rec_id", "url"}` par ligne) et
      relancer la même commande avec ce fichier et le MÊME préfixe
      `resultats` — la reprise par rec_id saute ce qui est déjà scrapé,
      c'est sûr par construction. (Les recherches par lots durent
@@ -440,7 +432,7 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    rapport français lisible et y ajouter ce que le script ne voit pas
    (coût Pappers + solde depuis la sortie de robot.run — l'alerte
    solde < 50 EN TÊTE du rapport —, jetons du palier 3 consommés,
-   nombre d'adresses LinkedIn devinées, incidents de session). Dans une session planifiée, personne ne lit
+   profils retrouvés par la recherche Sales Navigator, incidents de session). Dans une session planifiée, personne ne lit
    le terminal : le rapport doit partir par **PushNotification** (titre
    court, ex. « Robot sourcing : N profils à examiner ») ET constituer
    le message final de la session. Ne rien relancer ensuite.

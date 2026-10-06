@@ -26,6 +26,7 @@ runbook qui a raison, et ce README qui est en retard.
 | `robot/run.py` | Orchestrateur : sondage, tirage, insertion, Journal |
 | `robot/reliquat.py` | Reconstruit le travail en attente depuis Airtable |
 | `robot/airtable.py` | Client REST Airtable (payloads sur disque) |
+| `robot/recherche_nom.py` | Recherche Sales Navigator « Prénom Nom » des fiches que la recherche web n'a pas trouvées |
 | `robot/scraping_lot.py` | Boucle de scraping PhantomBuster en tâche de fond |
 | `robot/verif_identite.py` | Contrôle anti-homonymes des profils scrapés |
 | `robot/scorer_lot.py` | Scoring déterministe + payloads de mise à jour |
