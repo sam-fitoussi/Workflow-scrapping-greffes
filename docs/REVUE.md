@@ -46,8 +46,9 @@ regarde chaque matin, groupée par « Jour », filtrée sur « Vu » décoché.
    X+Y+Z+W+S = N (chaque ligne est attribuée à son canal principal ; les
    profils remontés par plusieurs canaux comptent une fois et sont
    signalés « dont k multi-canaux »). S'y ajoute parfois « ; N profils
-   non vus remontés (nouveau signal) » : profils jamais vus qu'Evertrace
-   vient de re-signaler, redatés du jour (voulu). Il n'y a rien à reconstituer ni
+   non vus remontés (nouveau signal) » : profils jamais vus re-signalés
+   par un canal — leur ligne existante est redatée du jour, sans doublon
+   (une seule ligne par profil non vu, voulu). Il n'y a rien à reconstituer ni
    à ventiler soi-même. Zéro création est NORMAL si les canaux n'ont
    rien remonté — ce n'est pas une erreur.
 4. Terminer par une PushNotification d'UNE ligne qui recopie cette

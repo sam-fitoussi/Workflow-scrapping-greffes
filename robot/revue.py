@@ -9,9 +9,13 @@ atterriraient dans un groupe déjà dépilé.
 
 Dédoublonnage : un même profil découvert par plusieurs canaux dans le
 même run -> UNE ligne, avec les liens vers toutes les fiches sources.
-Un re-signalement un autre jour -> nouvelle ligne à ce jour-là ; elle
-naît cochée « Vu » si une fiche source l'est déjà (le seuil des 60 jours
-est appliqué en amont par la déduplication inter-canaux).
+Un re-signalement un autre jour (nouvelle fiche source) :
+  - si le profil a déjà une ligne NON VUE, elle est réutilisée : redatée
+    du jour du run, la nouvelle fiche y est rattachée — une seule ligne
+    par profil, la plus récente (règle de Samuel) ;
+  - sinon, nouvelle ligne à ce jour-là ; elle naît cochée « Vu » si une
+    fiche source l'est déjà (le seuil des 60 jours est appliqué en amont
+    par la déduplication inter-canaux).
 
 Les informations affichées dans Revue sont des lookups qui suivent les
 fiches sources en direct ; le script n'écrit que l'ossature (nom, jour,
@@ -150,7 +154,9 @@ def main(essai: bool = False, historique: bool = False) -> None:
             groupes.setdefault(l["slug"], []).append(l)
 
     # 3b. Nouveau signal sur un profil NON VU : la ligne remonte au jour du run
+    #     (+ index des lignes non vues par profil, réutilisées à l'étape 4)
     remontees = []
+    non_vues: dict[str, dict] = {}
     if not historique:
         for r in revue:
             f = r["fields"]
@@ -158,6 +164,10 @@ def main(essai: bool = False, historique: bool = False) -> None:
             signal = max((l["signal"] for l in recs if l["signal"]), default=None)
             vue = f.get(CR["vu"]) or any(l["vu"] for l in recs)
             jour = f.get(CR["jour"])
+            slug = f.get(CR["slug"])
+            if slug and jour and not vue and jour >= (non_vues.get(slug) or {}).get("jour", ""):
+                non_vues[slug] = {"id": r["id"], "jour": jour,
+                                  "liens": {c: list(f.get(fld) or []) for c, fld in liens.items()}}
             if signal and jour and signal > jour and jour < jour_du_run and not vue:
                 remontees.append({"id": r["id"], "fields": {CR["jour"]: jour_du_run}})
                 if f.get(CR["slug"]):  # une fiche du même profil arrivée ce jour la complète
@@ -179,6 +189,12 @@ def main(essai: bool = False, historique: bool = False) -> None:
         jour = (min((l["date"] for l in lignes if l["date"]), default=jour_du_run)
                 if historique else jour_du_run)
         existant = index_lignes.get((slug, jour))
+        ancienne = non_vues.get(slug)
+        if not existant and ancienne and not any(l["vu"] for l in lignes):
+            # Profil déjà dans Revue, jamais vu : sa ligne est réutilisée et
+            # redatée du jour — pas de doublon, il remonte comme un nouveau
+            remontees.append({"id": ancienne["id"], "fields": {CR["jour"]: jour}})
+            existant = ancienne
         if existant:
             nouveaux = dict(existant["liens"])
             for l in lignes:
@@ -215,6 +231,7 @@ def main(essai: bool = False, historique: bool = False) -> None:
             airtable.mettre_a_jour(config.TABLE_REVUE, majs)
         if creations:
             airtable.inserer(config.TABLE_REVUE, creations)
+    completees = len(majs) - sum(1 for m in majs if m["id"] in {r["id"] for r in remontees})
     ventilation = " · ".join(f"{c} {n}" for c, n in par_canal.items())
     if historique:
         jours = sorted(c["fields"][CR["jour"]] for c in creations)
@@ -222,8 +239,9 @@ def main(essai: bool = False, historique: bool = False) -> None:
               if jours else "Rattrapage historique : rien à créer.")
     print(f"Revue du {jour_du_run} : {len(creations)} lignes créées — {ventilation}"
           + (f" (dont {multi_canaux} multi-canaux)" if multi_canaux else "")
-          + (f" ; {len(majs)} lignes du jour complétées" if majs else "")
-          + (f" ; {len(remontees)} profils non vus remontés (nouveau signal)" if remontees else "")
+          + (f" ; {completees} lignes du jour complétées" if completees else "")
+          + (f" ; {len({m['id'] for m in remontees})} profils non vus remontés (nouveau signal)"
+             if remontees else "")
           + ".")
 
 
