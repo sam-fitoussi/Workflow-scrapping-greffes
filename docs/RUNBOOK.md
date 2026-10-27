@@ -52,7 +52,7 @@ onglets miroirs NI à ces automatisations, et n'écrit JAMAIS la case
 case « Vu » peut être cochée de l'extérieur à tout moment, c'est normal.
 La table « Revue » (`tblcAnzoiOw7qt8WA`) est le tableau de bord matinal
 de Samuel, peuplée par une ROUTINE SÉPARÉE (~8h30, robot/revue.py,
-docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
+docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
 
 - Base Airtable « Sourcing - principal » (ex-« Scrapping Pappers » —
   même base, même ID) : `appdJUoNvhEi5jsJr`
