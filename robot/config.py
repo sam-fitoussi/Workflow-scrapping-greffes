@@ -14,11 +14,11 @@ AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY", "")
 ANTHROPIC_API_KEY = (os.environ.get("ROBOT_ANTHROPIC_API_KEY")
                      or os.environ.get("ANTHROPIC_API_KEY", ""))
 PHANTOMBUSTER_API_KEY = os.environ.get("PHANTOMBUSTER_API_KEY", "")
-# Context.dev : parcours COMPLET des profils à noter (le scraper ne remonte
+# Crustdata : parcours COMPLET des profils à noter (le scraper ne remonte
 # que 2 postes et 2 écoles) — cf. robot/parcours.py. Facultatif.
-CONTEXT_DEV_API_KEY = os.environ.get("CONTEXT_DEV_API_KEY", "")
-CONTEXT_MAX_PAR_RUN = 60   # enrichissements max par run (20 crédits chacun)
-CONTEXT_RESERVE = 500      # sous ce solde, on s'arrête : il reste aux skills
+CRUSTDATA_API_KEY = os.environ.get("CRUSTDATA_API_KEY", "")
+CRUSTDATA_MAX_PAR_RUN = 80  # profils enrichis max par run (1 crédit = 0,30 $ chacun)
+CRUSTDATA_RESERVE = 10      # sous ce solde (crédits), on n'enrichit plus
 
 # --- Modèle IA (Note IA + contrôle d'identité) ---
 # Adoption automatique du Sonnet le plus récent (décision de Samuel, 26/08/2026,
