@@ -81,7 +81,7 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
   `delete`) : sinon il saute en silence tout profil déjà scrapé une fois
   (« All leads have been processed »). `robot.scraping_lot` vérifie ce
   réglage au lancement et l'alerte ⚠️ éventuelle va EN TÊTE du rapport.
-- Clés API (`PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT),
+- Clés API (`PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT), `CONTEXT_DEV_API_KEY` (facultative),
   `ROBOT_ANTHROPIC_API_KEY`, `PHANTOMBUSTER_API_KEY`) : leur place est
   dans les **variables d'environnement de l'environnement d'exécution**
   (configuration claude.ai/code) — jamais dans le prompt de la Routine
@@ -414,7 +414,10 @@ docs/REVUE.md) : le robot de 6h05 ne la lit ni ne l'écrit.
    automatiquement par `config.modele_ia` — rien à signaler à ce sujet,
    SAUF le repli sur le modèle par défaut marqué ⚠️ au lancement, qui
    est un mode dégradé à mentionner dans le rapport ; notation DURE ;
-   reprise automatique si relancé) → pousser `notes_maj.json` via
+   reprise automatique si relancé ; chaque profil reçoit en plus son
+   parcours complet Context.dev — le scraper ne montre que 2 postes et
+   2 écoles — reporter dans le rapport la ligne « Context.dev : … » qu'il
+   imprime, arrêt compris) → pousser `notes_maj.json` via
    `python3 -m robot.airtable maj tblBngzHytB48MiDK /tmp/run_du_jour/notes_maj.json`.
 
 8. **Rapport** (digest scripté + rédaction modèle). D'abord

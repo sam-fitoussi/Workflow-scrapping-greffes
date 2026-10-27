@@ -47,6 +47,25 @@ def _resume(p: dict, ecoles: list[str]) -> str:
     return " • ".join(m for m in morceaux if m)[:1000]
 
 
+JSON_MAX = 6000  # extrait stocké dans Airtable
+
+
+def _json_borne(extrait: dict, maximum: int = JSON_MAX) -> str:
+    """JSON toujours VALIDE sous `maximum` caractères : les textes longs
+    (À propos, compétences) sont raccourcis, jamais le JSON coupé au milieu
+    (63 extraits illisibles avant ce correctif)."""
+    d = dict(extrait)
+    texte = json.dumps(d, ensure_ascii=False)
+    for cle in ("linkedinDescription", "linkedinSkillsLabel"):
+        if len(texte) <= maximum:
+            break
+        if isinstance(d.get(cle), str):
+            garde = max(0, len(d[cle]) - (len(texte) - maximum) - 20)
+            d[cle] = d[cle][:garde] + "…"
+            texte = json.dumps(d, ensure_ascii=False)
+    return texte
+
+
 def main(f_resultats: str, f_ref: str, f_contexte: str, prefixe: str) -> None:
     ref_records = json.load(open(f_ref))
     referentiel = scoring.construire_referentiel([
@@ -95,7 +114,7 @@ def main(f_resultats: str, f_ref: str, f_contexte: str, prefixe: str) -> None:
             CF["score"]: score,
             CF["detail"]: ", ".join(detail) if detail else "—",
             CF["resume"]: _resume(p, ecoles),
-            CF["json"]: json.dumps(extrait, ensure_ascii=False)[:2500],
+            CF["json"]: _json_borne(extrait),
         }})
         stats["ok"] += 1
 
@@ -105,7 +124,7 @@ def main(f_resultats: str, f_ref: str, f_contexte: str, prefixe: str) -> None:
             nom = f"{c.get('prenom') or ''} {c.get('nom') or ''}".strip() or "(nom inconnu)"
             a_noter.append({"rec_id": r["rec_id"], "nom": nom, "age": c.get("age"),
                             "societe": c.get("entreprise"), "ville": c.get("ville"),
-                            "naf": c.get("naf"),
+                            "naf": c.get("naf"), "url": r.get("url"),
                             "score": score, "profil": extrait})
 
     json.dump(maj, open(f"{prefixe}_maj.json", "w"), ensure_ascii=False)

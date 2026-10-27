@@ -14,6 +14,11 @@ AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY", "")
 ANTHROPIC_API_KEY = (os.environ.get("ROBOT_ANTHROPIC_API_KEY")
                      or os.environ.get("ANTHROPIC_API_KEY", ""))
 PHANTOMBUSTER_API_KEY = os.environ.get("PHANTOMBUSTER_API_KEY", "")
+# Context.dev : parcours COMPLET des profils à noter (le scraper ne remonte
+# que 2 postes et 2 écoles) — cf. robot/parcours.py. Facultatif.
+CONTEXT_DEV_API_KEY = os.environ.get("CONTEXT_DEV_API_KEY", "")
+CONTEXT_MAX_PAR_RUN = 60   # enrichissements max par run (20 crédits chacun)
+CONTEXT_RESERVE = 500      # sous ce solde, on s'arrête : il reste aux skills
 
 # --- Modèle IA (Note IA + contrôle d'identité) ---
 # Adoption automatique du Sonnet le plus récent (décision de Samuel, 26/08/2026,
@@ -189,7 +194,7 @@ CHAMPS_JOURNAL = {
 # Champs utiles d'un profil LinkedIn scrapé (PhantomBuster) — partagés par
 # le scraping (détection des scrapes vides), le contrôle d'identité et la
 # Note IA (extrait compact envoyé aux modèles).
-CHAMPS_PROFIL = [
+CHAMPS_PROFIL_BASE = [
     "linkedinHeadline", "location", "companyName", "linkedinJobTitle",
     "linkedinJobDateRange", "previousCompanyName", "linkedinPreviousJobTitle",
     "linkedinPreviousJobDateRange", "linkedinSchoolName", "linkedinSchoolDegree",
@@ -197,15 +202,21 @@ CHAMPS_PROFIL = [
     "linkedinPreviousSchoolDegree", "linkedinDescription",
     "linkedinFollowersCount", "linkedinConnectionsCount",
 ]
+# + la spécialité du diplôme (« Diplôme d'ingénieur » ≠ « MSc » dans la même
+# école) et les compétences : renvoyées par le scraper, longtemps jetées.
+CHAMPS_PROFIL = CHAMPS_PROFIL_BASE + [
+    "linkedinSchoolFieldOfStudy", "linkedinPreviousSchoolFieldOfStudy",
+    "linkedinPreviousSchoolDateRange", "linkedinSkillsLabel",
+]
 
 
 def champs_remplis(profil: dict) -> int:
-    """Nombre de CHAMPS_PROFIL réellement renseignés — comptage unique,
+    """Nombre de CHAMPS_PROFIL_BASE réellement renseignés — comptage unique,
     partagé par la détection des scrapes vides (scraping_lot) et le
     drapeau « profil quasi vide » (rapport). Un zéro (0 abonné,
     0 relation) est la signature du profil délaissé, pas un contenu :
     compté comme vide, au même titre que None, "" ou []."""
-    return sum(1 for k in CHAMPS_PROFIL if profil.get(k))
+    return sum(1 for k in CHAMPS_PROFIL_BASE if profil.get(k))
 
 # --- PhantomBuster (workspace « Samuel's workspace », compte LinkedIn de
 # Samuel connecté via l'extension ; bascule du 16/09/2026) ---
