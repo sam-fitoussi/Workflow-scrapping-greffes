@@ -241,6 +241,17 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
      5 appels par run, et le rapport mentionne combien ont été
      consommés. Un fondateur unique de 40 ans dans une SASU au nom de
      freelance ne mérite pas ce palier ; une équipe deeptech, si.
+   - **Palier Crustdata, au cas par cas** (décision de Samuel du 28/10/2026 ;
+     Crustdata, JAMAIS Context.dev) : sur une fiche « Ambigu » ou
+     « Non trouvé » qui montre des signaux d'excellent fondateur (grande
+     école, doctorat, ex-scale-up, deeptech, cofondateur remarquable),
+     enrichir le ou les candidats via `robot.parcours.enrichir([...])`
+     (POST /person/enrich, 1 crédit = 0,30 $ par profil) pour départager sur
+     le parcours daté complet : années d'études incompatibles avec la
+     naissance du greffe → écarter ; poste chez la société du greffe ou
+     domaine qui colle à l'activité → « Trouvé ». Plafond : 5 crédits par
+     run (le budget Crustdata sert d'abord à la Note IA). Le rapport
+     mentionne les crédits consommés et les fiches tranchées.
    Ne PAS exiger que la nouvelle société figure sur le profil (elle
    vient d'être créée) — mais la CHERCHER est permis et souvent payant.
    Sémantique des statuts (règle de Samuel — la même qu'au contrôle de
@@ -435,7 +446,8 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
    rapport français lisible et y ajouter ce que le script ne voit pas
    (coût Pappers + solde depuis la sortie de robot.run — l'alerte
    solde < 50 EN TÊTE du rapport —, jetons du palier 3 consommés,
-   profils retrouvés par la recherche Sales Navigator, incidents de session). Dans une session planifiée, personne ne lit
+   profils retrouvés par la recherche Sales Navigator, crédits Crustdata du
+   palier au cas par cas et fiches tranchées, incidents de session). Dans une session planifiée, personne ne lit
    le terminal : le rapport doit partir par **PushNotification** (titre
    court, ex. « Robot sourcing : N profils à examiner ») ET constituer
    le message final de la session. Ne rien relancer ensuite.
