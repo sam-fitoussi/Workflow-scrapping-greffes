@@ -54,6 +54,10 @@ trouvent bien.
   matching par égalité de chaînes normalisées, accents conservés : les
   variantes d'orthographe s'ajoutent comme lignes du référentiel (ex.
   « 42 Paris »), pas dans le code.
+  Depuis le 29/10/2026 : matching tolérant (accents et ponctuation
+  ignorés, entrée du référentiel au début du libellé ou l'inverse, en mots
+  entiers — sauf les lycées, à l'égalité seulement) et +1 point pour un
+  doctorat (PhD, hors doctorats d'exercice) ; cf. `robot/scoring.py`.
 - Note IA testée sur les 6 profils à score ≥ 1 du pilote : de 19/20 à
   3/20, sévérité conforme à l'attendu — le barème vit depuis dans la
   table Prompts d'Airtable, éditable sans toucher au code.

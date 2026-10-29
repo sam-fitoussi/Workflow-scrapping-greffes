@@ -108,7 +108,10 @@ def main(f_resultats: str, f_ref: str, f_contexte: str, prefixe: str) -> None:
             (p.get("linkedinSchoolName"), p.get("linkedinSchoolDegree")),
             (p.get("linkedinPreviousSchoolName"), p.get("linkedinPreviousSchoolDegree")),
         ])
-        score, detail = scoring.scorer_profil(referentiel, ecoles, entreprises)
+        doctorat = scoring.a_un_doctorat(
+            [p.get("linkedinSchoolDegree"), p.get("linkedinPreviousSchoolDegree")],
+            [p.get("linkedinHeadline"), p.get("linkedinJobTitle"), p.get("linkedinPreviousJobTitle")])
+        score, detail = scoring.scorer_profil(referentiel, ecoles, entreprises, doctorat)
         extrait = {k: p.get(k) for k in CHAMPS_PROFIL if p.get(k) is not None}
         maj.append({"id": r["rec_id"], "fields": {
             CF["score"]: score,
