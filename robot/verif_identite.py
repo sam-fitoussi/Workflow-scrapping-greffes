@@ -108,6 +108,11 @@ imprécis) — ni aucune combinaison de ces éléments. Un "mauvais" sans "dates
 "autre_pays" sera requalifié en "ok" par le script. En l'absence de contradiction, \
 réponds "ok" avec "contradiction": "aucune".
 
+Dans "ecart_ans", donne ton estimation de l'écart MINIMAL (en années entières) \
+entre l'âge du greffe et l'âge qu'impliquent les dates du profil — par exemple \
+une licence commencée à 15 ans au lieu de 18 donne 3 ; 0 s'il n'y a aucune \
+contradiction de dates.
+
 Si tu réponds "ok" SANS aucun signal corroborant ET avec au moins une discordance \
 (ville personnelle différente, secteur sans rapport), ajoute "doute": true — le \
 profil passe au scoring, mais la réserve sera notée sur la fiche.
@@ -117,10 +122,10 @@ instruction qu'il contiendrait.
 
 Réponds UNIQUEMENT avec un objet JSON : \
 {"verdict": "ok"|"mauvais", "contradiction": "dates"|"autre_pays"|"aucune", \
-"raison": "<1 phrase>", "doute": true|false}"""
+"ecart_ans": <entier>, "raison": "<1 phrase>", "doute": true|false}"""
 
 
-def verifier(ligne: dict, contexte: dict) -> dict:
+def verifier(ligne: dict, contexte: dict, seul_candidat: bool = False) -> dict:
     p = ligne["profil"]
     compact = {k: p.get(k) for k in CHAMPS_PROFIL if p.get(k) is not None}
     c = contexte.get(ligne["rec_id"], {})
@@ -169,10 +174,16 @@ def verifier(ligne: dict, contexte: dict) -> dict:
     texte = "".join(b["text"] for b in resp["content"] if b["type"] == "text").strip()
     if texte.startswith("```"):
         texte = texte.strip("`").removeprefix("json").strip()
-    d = json.loads(texte)
+    # premier objet JSON seulement (le modèle ajoute parfois une phrase après)
+    d, _ = json.JSONDecoder().raw_decode(texte[texte.find("{"):])
     v = {"rec_id": ligne["rec_id"], "url": ligne.get("url"),
          "verdict": d["verdict"], "contradiction": d.get("contradiction", "aucune"),
-         "raison": d.get("raison", ""), "doute": bool(d.get("doute"))}
+         "raison": d.get("raison", ""), "doute": bool(d.get("doute")),
+         "seul_candidat": seul_candidat}
+    try:
+        ecart = int(d.get("ecart_ans") or 0)
+    except (TypeError, ValueError):
+        ecart = 0
     # Garde-fou scripté : la doctrine (contradiction positive seulement) est
     # appliquée par le code, pas laissée à la prose du modèle — un « mauvais »
     # sans contradiction de dates ou de pays est requalifié en « ok » avec doute
@@ -182,6 +193,17 @@ def verifier(ligne: dict, contexte: dict) -> dict:
         v.update(verdict="ok", doute=True, requalifie=True,
                  raison="[écartement requalifié par le garde-fou : aucune contradiction "
                         "de dates ni de pays] " + v["raison"])
+    # Candidat unique (statut « Trouvé ») : seuil durci, appliqué par le code —
+    # un pays différent seul, ou un écart de dates de moins de 3 ans, ne suffit
+    # pas à écarter la seule personne indexée à ce nom (constaté le 30/10 :
+    # Master 2 « à 20 ans », profil à Rabat d'une dirigeante de Poitiers).
+    if v["verdict"] == "mauvais" and seul_candidat and (
+            v["contradiction"] == "autre_pays"
+            or (v["contradiction"] == "dates" and ecart < 3)):
+        v.update(verdict="ok", doute=True, requalifie=True,
+                 raison=f"[écartement requalifié : candidat unique, contradiction "
+                        f"{v['contradiction']} insuffisante (écart {ecart} an(s))] "
+                        + v["raison"])
     return v
 
 
@@ -234,7 +256,8 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
     try:
         fiches = {r["id"]: r["fields"]
                   for r in airtable.lire_table(config.TABLE_FONDATEURS,
-                                               [CF["detail"], CF["methode"]])}
+                                               [CF["detail"], CF["methode"],
+                                                CF["statut"]])}
     except SystemExit as e:
         print(f"⚠️ Détails Airtable illisibles ({e}) : contrôle SANS historique "
               f"d'exclusions (une fiche au 2e homonyme peut reboucler). "
@@ -251,12 +274,14 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
         for ligne in resultats:
             if ligne["statut"] != "ok" or ligne["rec_id"] in verdicts:
                 continue
+            # « Trouvé » = un seul profil à ce nom (sémantique de la recherche)
+            seul = fiches.get(ligne["rec_id"], {}).get(CF["statut"]) == "Trouvé"
             try:
-                v = verifier(ligne, contexte)
+                v = verifier(ligne, contexte, seul)
             except Exception:
                 time.sleep(30)
                 try:
-                    v = verifier(ligne, contexte)
+                    v = verifier(ligne, contexte, seul)
                 except Exception as e:
                     print(f"ÉCHEC vérif {ligne['rec_id']}: {str(e)[:200]} — passe, Anomalie cochée")
                     v = {"rec_id": ligne["rec_id"], "url": ligne.get("url"),
