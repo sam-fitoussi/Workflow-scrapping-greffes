@@ -32,6 +32,7 @@ Usage (palier « au cas par cas » du RUNBOOK, lire des candidats) :
 import json
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -47,6 +48,25 @@ class ApifyIndisponible(Exception):
     """Clé absente ou refusée, crédit épuisé : rien ne sert d'insister."""
 
 
+def _appel(req: urllib.request.Request, timeout_s: int):
+    """Réponse JSON d'Apify ; une coupure réseau passagère (« Remote end
+    closed connection ») est retentée une fois après 10 s."""
+    for tentative in range(2):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout_s + 60) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            corps = e.read().decode(errors="replace")[:200]
+            if e.code in (401, 402, 403):
+                raise ApifyIndisponible(f"HTTP {e.code} : {corps}")
+            if tentative or e.code < 500:
+                raise RuntimeError(f"Apify HTTP {e.code} : {corps}")
+        except (urllib.error.URLError, ConnectionError, TimeoutError, OSError):
+            if tentative:
+                raise
+        time.sleep(10)
+
+
 def scraper(urls: list[str], timeout_s: int = 300) -> dict[str, dict]:
     """{url demandée: item Apify brut} — un seul appel pour tout le lot."""
     if not config.APIFY_TOKEN:
@@ -58,14 +78,7 @@ def scraper(urls: list[str], timeout_s: int = 300) -> dict[str, dict]:
         data=json.dumps({"profileScraperMode": MODE, "queries": urls}).encode(),
         headers={"Authorization": f"Bearer {config.APIFY_TOKEN}",
                  "Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout_s + 60) as r:
-            items = json.load(r)
-    except urllib.error.HTTPError as e:
-        corps = e.read().decode(errors="replace")[:200]
-        if e.code in (401, 402, 403):
-            raise ApifyIndisponible(f"HTTP {e.code} : {corps}")
-        raise RuntimeError(f"Apify HTTP {e.code} : {corps}")
+    items = _appel(req, timeout_s)
     par_cle = {_cle((it.get("originalQuery") or {}).get("query")): it for it in items or []}
     return {u: par_cle[_cle(u)] for u in urls if _cle(u) in par_cle}
 
@@ -102,14 +115,7 @@ def rechercher_nom(prenom: str, nom: str, france: bool = False, timeout_s: int =
         data=json.dumps(entree).encode(),
         headers={"Authorization": f"Bearer {config.APIFY_TOKEN}",
                  "Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout_s + 60) as r:
-            return [it for it in json.load(r) or [] if it.get("linkedinUrl")]
-    except urllib.error.HTTPError as e:
-        corps = e.read().decode(errors="replace")[:200]
-        if e.code in (401, 402, 403):
-            raise ApifyIndisponible(f"HTTP {e.code} : {corps}")
-        raise RuntimeError(f"Apify HTTP {e.code} : {corps}")
+    return [it for it in _appel(req, timeout_s) or [] if it.get("linkedinUrl")]
 
 
 def introuvable(item: dict) -> bool:
