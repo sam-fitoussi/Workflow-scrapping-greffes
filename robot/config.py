@@ -13,7 +13,6 @@ AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY", "")
 # d'exécution la fournit sous le nom ROBOT_ANTHROPIC_API_KEY.
 ANTHROPIC_API_KEY = (os.environ.get("ROBOT_ANTHROPIC_API_KEY")
                      or os.environ.get("ANTHROPIC_API_KEY", ""))
-PHANTOMBUSTER_API_KEY = os.environ.get("PHANTOMBUSTER_API_KEY", "")
 # Apify : scraping des profils LinkedIn sans compte (cf. robot/apify.py)
 APIFY_TOKEN = os.environ.get("APIFY_TOKEN") or os.environ.get("APIFY_API_TOKEN", "")
 
@@ -216,9 +215,6 @@ def champs_remplis(profil: dict) -> int:
     0 relation) est la signature du profil délaissé, pas un contenu :
     compté comme vide, au même titre que None, "" ou []."""
     return sum(1 for k in CHAMPS_PROFIL_BASE if profil.get(k))
-
-# --- PhantomBuster : seulement la recherche par nom (Sales Navigator) ---
-PHANTOM_RECHERCHE_NOM_ID = "737480332830394"  # Robot sourcing - Recherche par nom (Sales Navigator Search Export)
 
 # --- Scraping des profils (Apify, sans le compte LinkedIn de Samuel) ---
 # Plafond de profils scrapés par jour : garde-fou de coût (0,004 $ par

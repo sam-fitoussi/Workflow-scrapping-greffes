@@ -23,6 +23,8 @@ Le profil renvoyé est converti au format historique du pipeline (champs
 
 Clé : variable d'environnement APIFY_TOKEN.
 
+Aussi : la recherche par nom (rechercher_nom, robot/recherche_nom.py).
+
 Usage (palier « au cas par cas » du RUNBOOK, lire des candidats) :
     python3 -m robot.apify <url LinkedIn> [<url> ...]
 """
@@ -73,6 +75,41 @@ def _cle(url: str | None) -> str:
     pour retrouver le résultat de chaque adresse demandée."""
     m = re.search(r"/in/([^/?#]+)", urllib.parse.unquote(url or ""))
     return m.group(1).lower() if m else (url or "")
+
+
+ACTEUR_RECHERCHE = "harvestapi~linkedin-profile-search-by-name"
+PRIX_RECHERCHE = 0.004  # $ par page de 10 résultats
+
+
+def rechercher_nom(prenom: str, nom: str, france: bool = False, timeout_s: int = 120) -> list[dict]:
+    """Recherche LinkedIn par prénom + nom (sans compte LinkedIn) : profils
+    courts {name, position, linkedinUrl, location.linkedinText}, 10 au plus.
+    Remplace la recherche Sales Navigator via PhantomBuster (test du 31/10 :
+    mêmes résultats sur 13 noms, noms masqués « Allan B. » compris).
+    france=True : seulement les profils situés en France — la localisation
+    renvoyée n'est souvent que la ville (« Nice », « Fasano »), le pays n'y
+    figure pas."""
+    if not config.APIFY_TOKEN:
+        raise ApifyIndisponible("APIFY_TOKEN absent")
+    entree = {"profileScraperMode": "Short", "firstName": prenom, "lastName": nom,
+              "strictSearch": True, "maxPages": 1}
+    if france:
+        entree["locations"] = ["France"]
+    req = urllib.request.Request(
+        f"https://api.apify.com/v2/acts/{ACTEUR_RECHERCHE}/run-sync-get-dataset-items?"
+        + urllib.parse.urlencode({"maxTotalChargeUsd": round(PRIX_RECHERCHE * 2 + 0.01, 3),
+                                  "timeout": timeout_s}),
+        data=json.dumps(entree).encode(),
+        headers={"Authorization": f"Bearer {config.APIFY_TOKEN}",
+                 "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout_s + 60) as r:
+            return [it for it in json.load(r) or [] if it.get("linkedinUrl")]
+    except urllib.error.HTTPError as e:
+        corps = e.read().decode(errors="replace")[:200]
+        if e.code in (401, 402, 403):
+            raise ApifyIndisponible(f"HTTP {e.code} : {corps}")
+        raise RuntimeError(f"Apify HTTP {e.code} : {corps}")
 
 
 def introuvable(item: dict) -> bool:

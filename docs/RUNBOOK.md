@@ -3,7 +3,7 @@
 Ce document est le mode d'emploi exact que suit la session Claude planifiée
 (Routine quotidienne) qui exécute le robot. Il doit rester autoportant : la
 session qui le lit démarre de zéro, avec ce repo cloné et les connecteurs
-Airtable + PhantomBuster + Apify.
+Airtable + Apify.
 
 **En cas de contradiction entre le prompt de la Routine et ce runbook,
 c'est le runbook qui fait foi.**
@@ -77,11 +77,12 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
   700 profils/jour via PhantomBuster. Profil complet et frais, 0,004 $
   par profil. Clé absente ou crédit Apify épuisé : message ⛔, fiches
   intactes (reprises au run suivant) — le signaler EN TÊTE du rapport.
-- PhantomBuster (compte LinkedIn de Samuel) : seulement la recherche
-  Sales Navigator par nom (`robot/recherche_nom.py`, quelques dizaines
-  de recherches par jour).
+  La recherche LinkedIn par nom (`robot/recherche_nom.py`) passe aussi
+  par Apify (acteur `harvestapi/linkedin-profile-search-by-name`, 0,004 $
+  par nom). Le robot n'utilise plus PhantomBuster ni le compte LinkedIn
+  de Samuel.
 - Clés API (`PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT), `APIFY_TOKEN`,
-  `ROBOT_ANTHROPIC_API_KEY`, `PHANTOMBUSTER_API_KEY`) : leur place est
+  `ROBOT_ANTHROPIC_API_KEY`) : leur place est
   dans les **variables d'environnement de l'environnement d'exécution**
   (configuration claude.ai/code) — jamais dans le prompt de la Routine
   ni dans le repo. ⚠️ La clé
@@ -272,14 +273,14 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
    un candidat au hasard coûte un scrape puis une exclusion, et fait
    reboucler la fiche jusqu'au 2e homonyme pour rien. « Non trouvé »
    aussi quand la recherche ne donne rien.
-   **Les « Non trouvé » passent ensuite par la recherche Sales
-   Navigator** (`robot.recherche_nom`, ci-dessous) : la recherche web ne
+   **Les « Non trouvé » passent ensuite par la recherche LinkedIn par
+   nom** (`robot.recherche_nom`, ci-dessous) : la recherche web ne
    voit que les profils indexés par les moteurs, alors que la recherche
    interne de LinkedIn voit aussi les profils récents, ceux dont le nom
    est masqué hors réseau (« Allan B. ») et ceux dont l'adresse a
    changé — au test, 7 fondateurs sur 12 retrouvés là où la recherche
    web, la devinette d'adresse et Surfe n'en trouvaient aucun. Ne plus
-   deviner d'adresse : si Sales Navigator ne trouve personne, l'adresse
+   deviner d'adresse : si la recherche par nom ne trouve personne, l'adresse
    n'existe vraisemblablement pas.
    Pas de relance des non-trouvés (sauf échec technique : une seule
    relance le lendemain). Écrire les résultats dans
@@ -291,15 +292,15 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
        "fldgf0zCUWs3jT2qB": "Recherche web"}}]
    ```
    (champs : statut « Trouvé / Ambigu / Non trouvé » ; URL LinkedIn, à
-   omettre si non trouvé ; méthode : « Recherche web »). Puis, en tâche
-   de fond comme le scraping (~30 s par fiche) :
+   omettre si non trouvé ; méthode : « Recherche web »). Puis (quelques
+   secondes par nom) :
    `python3 -m robot.recherche_nom /tmp/run_du_jour/recherches.json /tmp/run_du_jour`
    — le script cherche les « Non trouvé » par « Prénom Nom », retient le
    candidat le plus probable (règle de Samuel : tenter plutôt
    qu'enterrer, le contrôle de l'étape 5 tranche) et réécrit le fichier
-   (méthode « Recherche Sales Nav »). Ne pas re-trier ses choix à la
+   (méthode « Recherche par nom »). Ne pas re-trier ses choix à la
    main. Enfin `python3 -m robot.airtable maj tblBngzHytB48MiDK /tmp/run_du_jour/recherches.json`.
-   Si la recherche échoue (compte LinkedIn déconnecté…), le script passe
+   Si la recherche échoue (clé Apify absente, panne), le script passe
    lui-même ces fiches en « À chercher » (jamais enterrées sans avoir été
    cherchées) : pousser le fichier et le signaler EN TÊTE du rapport. Pour une fiche qui était en Anomalie
    « homonyme écarté » et dont la re-recherche aboutit (nouveau candidat
@@ -314,7 +315,7 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
      recherches, elle n'en dépend pas) :
      `python3 -m robot.scraping_lot /tmp/run_du_jour/reliquat_scrape.jsonl /tmp/run_du_jour/resultats`
    - **Vague 2 — les URLs du jour, une fois TOUTES les recherches
-     faites** (recherche Sales Navigator comprise) : écrire la file JSONL (`{"rec_id", "url"}` par ligne) et
+     faites** (recherche par nom comprise) : écrire la file JSONL (`{"rec_id", "url"}` par ligne) et
      relancer la même commande avec ce fichier et le MÊME préfixe
      `resultats` — la reprise par rec_id saute ce qui est déjà scrapé,
      c'est sûr par construction. (Les recherches par lots durent
@@ -429,7 +430,7 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
    rapport français lisible et y ajouter ce que le script ne voit pas
    (coût Pappers + solde depuis la sortie de robot.run — l'alerte
    solde < 50 EN TÊTE du rapport —, jetons du palier 3 consommés,
-   profils retrouvés par la recherche Sales Navigator, profils lus au
+   profils retrouvés par la recherche par nom, profils lus au
    cas par cas et fiches tranchées, incidents de session). Dans une session planifiée, personne ne lit
    le terminal : le rapport doit partir par **PushNotification** (titre
    court, ex. « Robot sourcing : N profils à examiner ») ET constituer
@@ -459,8 +460,8 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
 ## Ce que le run ne fait JAMAIS
 
 - Dépasser 300 profils scrapés/jour (config.SCRAPE_DAILY_CAP).
-- Scraper des profils via PhantomBuster (le compte LinkedIn de Samuel ne
-  sert plus qu'à la recherche par nom).
+- Passer par PhantomBuster ou le compte LinkedIn de Samuel (signalé par
+  LinkedIn pour activité inhabituelle : tout passe par Apify).
 - Re-tirer une date déjà traitée en dehors du rattrapage du dimanche.
 - Faire transiter un payload Airtable volumineux par le contexte (fichiers
   + `robot.airtable`, toujours).
