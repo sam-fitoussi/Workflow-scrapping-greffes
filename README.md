@@ -27,12 +27,12 @@ runbook qui a raison, et ce README qui est en retard.
 | `robot/reliquat.py` | Reconstruit le travail en attente depuis Airtable |
 | `robot/airtable.py` | Client REST Airtable (payloads sur disque) |
 | `robot/recherche_nom.py` | Recherche Sales Navigator « Prénom Nom » des fiches que la recherche web n'a pas trouvées |
-| `robot/scraping_lot.py` | Boucle de scraping PhantomBuster en tâche de fond |
+| `robot/scraping_lot.py`, `robot/apify.py` | Scraping des profils via Apify (sans compte LinkedIn), en tâche de fond |
 | `robot/verif_identite.py` | Contrôle anti-homonymes des profils scrapés |
 | `robot/scorer_lot.py` | Scoring déterministe + payloads de mise à jour |
 | `robot/note_ia.py` | Note IA sur 20 (barème dans la table Prompts d'Airtable ; `robot/note_ia_prompt.md` n'est que la copie de secours) |
 | `robot/rapport.py` | Digest déterministe du run pour le rapport final |
-| `robot/scoring.py`, `robot/phantoms.py` | Briques : matching du référentiel, pilotage PhantomBuster |
+| `robot/scoring.py`, `robot/phantoms.py` | Briques : matching du référentiel, recherche Sales Navigator par nom (PhantomBuster) |
 | `robot/revue.py` | Robot Revue (routine séparée, voir `docs/REVUE.md`) |
 
 Le modèle (session Claude planifiée) n'intervient qu'aux deux endroits où

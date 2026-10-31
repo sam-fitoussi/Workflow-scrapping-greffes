@@ -3,7 +3,7 @@
 Ce document est le mode d'emploi exact que suit la session Claude planifiée
 (Routine quotidienne) qui exécute le robot. Il doit rester autoportant : la
 session qui le lit démarre de zéro, avec ce repo cloné et les connecteurs
-Airtable + PhantomBuster.
+Airtable + PhantomBuster + Apify.
 
 **En cas de contradiction entre le prompt de la Routine et ce runbook,
 c'est le runbook qui fait foi.**
@@ -71,17 +71,16 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
     `fldI248T6i6a9qvYA`=Détail score · `fldcCc78Gb1WGWoUL`=Résumé profil ·
     `fldDARjR1pwhcxxxM`=Note IA · `fldyQkdNmlJWjLXxv`=Justification ·
     `flddifOPKnUCBSfC4`=Anomalie · `fldEFrlCmXUUXVKPb`=Vu.
-- PhantomBuster : Profile Scraper `4413122660053115` (workspace de Samuel,
-  son compte LinkedIn connecté ; si les scrapes sortent en « erreur »
-  — le lot s'arrête de lui-même après 3 erreurs d'affilée, message ⛔ —
-  c'est le cookie LinkedIn à reconnecter dans PhantomBuster : le signaler
-  EN TÊTE du rapport ; les fiches non scrapées restent intactes et
-  repartent en reliquat).
-  Le Phantom DOIT être réglé sur « Delete previous files » (fileMgmt
-  `delete`) : sinon il saute en silence tout profil déjà scrapé une fois
-  (« All leads have been processed »). `robot.scraping_lot` vérifie ce
-  réglage au lancement et l'alerte ⚠️ éventuelle va EN TÊTE du rapport.
-- Clés API (`PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT), `CRUSTDATA_API_KEY` (facultative),
+- Scraping des profils : Apify, acteur `harvestapi/linkedin-profile-scraper`
+  (`robot/apify.py`), SANS le compte LinkedIn de Samuel — LinkedIn l'a
+  signalé pour activité inhabituelle quand nos robots scrapaient 500 à
+  700 profils/jour via PhantomBuster. Profil complet et frais, 0,004 $
+  par profil. Clé absente ou crédit Apify épuisé : message ⛔, fiches
+  intactes (reprises au run suivant) — le signaler EN TÊTE du rapport.
+- PhantomBuster (compte LinkedIn de Samuel) : seulement la recherche
+  Sales Navigator par nom (`robot/recherche_nom.py`, quelques dizaines
+  de recherches par jour).
+- Clés API (`PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT), `APIFY_TOKEN`,
   `ROBOT_ANTHROPIC_API_KEY`, `PHANTOMBUSTER_API_KEY`) : leur place est
   dans les **variables d'environnement de l'environnement d'exécution**
   (configuration claude.ai/code) — jamais dans le prompt de la Routine
@@ -241,17 +240,14 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
      5 appels par run, et le rapport mentionne combien ont été
      consommés. Un fondateur unique de 40 ans dans une SASU au nom de
      freelance ne mérite pas ce palier ; une équipe deeptech, si.
-   - **Palier Crustdata, au cas par cas** (décision de Samuel du 28/10/2026 ;
-     Crustdata, JAMAIS Context.dev) : sur une fiche « Ambigu » ou
-     « Non trouvé » qui montre des signaux d'excellent fondateur (grande
-     école, doctorat, ex-scale-up, deeptech, cofondateur remarquable),
-     enrichir le ou les candidats via `robot.parcours.enrichir([...])`
-     (POST /person/enrich, 1 crédit = 0,30 $ par profil) pour départager sur
-     le parcours daté complet : années d'études incompatibles avec la
-     naissance du greffe → écarter ; poste chez la société du greffe ou
-     domaine qui colle à l'activité → « Trouvé ». Plafond : 5 crédits par
-     run (le budget Crustdata sert d'abord à la Note IA). Le rapport
-     mentionne les crédits consommés et les fiches tranchées.
+   - **Lecture des candidats, au cas par cas** : sur une fiche « Ambigu »
+     ou « Non trouvé » qui montre des signaux d'excellent fondateur
+     (grande école, doctorat, ex-scale-up, deeptech, cofondateur
+     remarquable), lire le parcours daté complet des candidats avec
+     `python3 -m robot.apify <url> [<url> …]` (0,004 $ par profil) pour
+     départager : années d'études incompatibles avec la naissance du
+     greffe → écarter ; poste chez la société du greffe ou domaine qui
+     colle à l'activité → « Trouvé ». Au plus 15 profils par run.
    Ne PAS exiger que la nouvelle société figure sur le profil (elle
    vient d'être créée) — mais la CHERCHER est permis et souvent payant.
    Sémantique des statuts (règle de Samuel — la même qu'au contrôle de
@@ -295,17 +291,17 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
        "fldgf0zCUWs3jT2qB": "Recherche web"}}]
    ```
    (champs : statut « Trouvé / Ambigu / Non trouvé » ; URL LinkedIn, à
-   omettre si non trouvé ; méthode : « Recherche web »). Puis, UNE FOIS
-   LA VAGUE 1 TERMINÉE (le compte LinkedIn ne supporte pas deux Phantoms
-   à la fois), en tâche de fond comme le scraping (~30 s par fiche) :
+   omettre si non trouvé ; méthode : « Recherche web »). Puis, en tâche
+   de fond comme le scraping (~30 s par fiche) :
    `python3 -m robot.recherche_nom /tmp/run_du_jour/recherches.json /tmp/run_du_jour`
    — le script cherche les « Non trouvé » par « Prénom Nom », retient le
    candidat le plus probable (règle de Samuel : tenter plutôt
    qu'enterrer, le contrôle de l'étape 5 tranche) et réécrit le fichier
    (méthode « Recherche Sales Nav »). Ne pas re-trier ses choix à la
    main. Enfin `python3 -m robot.airtable maj tblBngzHytB48MiDK /tmp/run_du_jour/recherches.json`.
-   Si le script échoue, pousser le fichier tel quel (les « Non trouvé »
-   restent non trouvés) et le signaler dans le rapport. Pour une fiche qui était en Anomalie
+   Si la recherche échoue (compte LinkedIn déconnecté…), le script passe
+   lui-même ces fiches en « À chercher » (jamais enterrées sans avoir été
+   cherchées) : pousser le fichier et le signaler EN TÊTE du rapport. Pour une fiche qui était en Anomalie
    « homonyme écarté » et dont la re-recherche aboutit (nouveau candidat
    trouvé) : ajouter `"flddifOPKnUCBSfC4": false` au payload — l'anomalie
    est résolue, on décoche (en gardant « Détail score » intact : c'est
@@ -333,38 +329,22 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
    pour retrouver l'avancement après une compaction — le consulter au
    plus une fois par tranche de ~10 minutes.
    Lire `resultats.jsonl` une seule fois à la fin.
-   Un profil que PhantomBuster déclare introuvable sort en statut
-   « perimee » : la personne a changé d'adresse LinkedIn (LinkedIn ne
-   redirige pas les anciennes adresses, l'index de recherche les garde
-   en cache) — l'étape 5 renvoie la fiche en « À chercher », adresse
-   exclue, pour retrouver le profil ACTUEL de la même personne. Un
-   profil renvoyé quasi vide sort en « vide » : re-scrapé une fois au
-   run suivant, puis même traitement. Un profil que le Phantom SAUTE
-   parce qu'il l'a déjà traité sort en « deja_traite » : ce n'est PAS une
-   URL morte, la fiche n'est pas touchée et repart en reliquat (alerte en
-   tête du rapport : régler « Delete previous files »). Rien à faire à la
-   main.
-   Plafond strict : 300 profils/jour (config.SCRAPE_DAILY_CAP —
-   PhantomBuster annonce 1000-1500/jour sans risque, on garde une marge
-   x3-5 car le compte LinkedIn est partagé), appliqué par le script. À
-   ~38 s par profil, une journée pleine peut prendre jusqu'à ~3h10 de
-   scraping : le lancer TÔT dans le run, en tâche de fond. Une commande
-   de fond étant coupée à 2 h, le script s'arrête de lui-même au bout de
-   105 min (config.SCRAPE_ECHEANCE_MIN), entre deux profils, avec le
-   message « ⏱️ Échéance … atteinte » : relancer alors la MÊME commande,
-   en tâche de fond — elle reprend là où elle s'est arrêtée (autant de
-   fois que nécessaire, le plafond quotidien reste appliqué). (En cas de
-   relance dans la MÊME session — après compaction par exemple — les
-   rec_id déjà scrapés sont sur disque, sautés, et comptent dans le
-   plafond : la reprise est sûre). Le compteur ne survit pas à la
-   session : dans une SECONDE session le même jour (« Run now » manuel un
-   jour de run automatique, relance après session morte), ne PAS scraper
-   du tout — ce n'est qu'un report d'un jour, le reliquat garantit la
-   reprise au run du lendemain. Séquentiel obligatoire — jamais de
-   parallélisme sur le compte LinkedIn.
-   ⚠️ Si on pilote PhantomBuster via MCP : utiliser
-   `containers_fetch_result_object`, jamais `containers_fetch`
-   (withResultObject=true) qui renvoie ~1000 tokens de logs par profil.
+   Un profil introuvable (404) sort en statut « perimee » : l'adresse
+   n'existe plus (une ANCIENNE adresse encore connue est, elle, résolue
+   d'office vers le profil actuel) — l'étape 5 renvoie la fiche en « À
+   chercher », adresse exclue. Un profil renvoyé quasi vide sort en
+   « vide » : re-scrapé une fois au run suivant, puis même traitement.
+   Rien à faire à la main.
+   Plafond : 300 profils/jour (config.SCRAPE_DAILY_CAP, garde-fou de
+   coût), appliqué par le script, par lots de 15 (~1 à 2 min par lot).
+   Le script s'arrête de lui-même au bout de 105 min
+   (config.SCRAPE_ECHEANCE_MIN), entre deux lots, avec le message
+   « ⏱️ Échéance … atteinte » : relancer alors la MÊME commande, en tâche
+   de fond — elle reprend là où elle s'est arrêtée. Les rec_id déjà
+   scrapés sont sur disque, sautés, et comptent dans le plafond : la
+   reprise est sûre. Dans une SECONDE session le même jour (« Run now »
+   manuel, relance après session morte), ne PAS scraper du tout — le
+   reliquat garantit la reprise au run du lendemain.
    ⚠️ `sleep` est bloqué par le harness : utiliser
    `python3 -c "import time; time.sleep(N)"` si besoin d'attendre.
    ⚠️ Les commandes Bash de PREMIER PLAN basculent d'office en tâche de
@@ -430,10 +410,8 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
    automatiquement par `config.modele_ia` — rien à signaler à ce sujet,
    SAUF le repli sur le modèle par défaut marqué ⚠️ au lancement, qui
    est un mode dégradé à mentionner dans le rapport ; notation DURE ;
-   reprise automatique si relancé ; chaque profil reçoit en plus son
-   parcours complet Crustdata — le scraper ne montre que 2 postes et
-   2 écoles — reporter dans le rapport la ligne « Crustdata : … » qu'il
-   imprime, arrêt compris) → pousser `notes_maj.json` via
+   reprise automatique si relancé ; le profil porte son parcours daté
+   complet) → pousser `notes_maj.json` via
    `python3 -m robot.airtable maj tblBngzHytB48MiDK /tmp/run_du_jour/notes_maj.json`.
 
 8. **Rapport** (digest scripté + rédaction modèle). D'abord
@@ -451,8 +429,8 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
    rapport français lisible et y ajouter ce que le script ne voit pas
    (coût Pappers + solde depuis la sortie de robot.run — l'alerte
    solde < 50 EN TÊTE du rapport —, jetons du palier 3 consommés,
-   profils retrouvés par la recherche Sales Navigator, crédits Crustdata du
-   palier au cas par cas et fiches tranchées, incidents de session). Dans une session planifiée, personne ne lit
+   profils retrouvés par la recherche Sales Navigator, profils lus au
+   cas par cas et fiches tranchées, incidents de session). Dans une session planifiée, personne ne lit
    le terminal : le rapport doit partir par **PushNotification** (titre
    court, ex. « Robot sourcing : N profils à examiner ») ET constituer
    le message final de la session. Ne rien relancer ensuite.
@@ -480,8 +458,9 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
 
 ## Ce que le run ne fait JAMAIS
 
-- Dépasser 300 profils scrapés/jour (config.SCRAPE_DAILY_CAP) ou
-  paralléliser le scraping.
+- Dépasser 300 profils scrapés/jour (config.SCRAPE_DAILY_CAP).
+- Scraper des profils via PhantomBuster (le compte LinkedIn de Samuel ne
+  sert plus qu'à la recherche par nom).
 - Re-tirer une date déjà traitée en dehors du rattrapage du dimanche.
 - Faire transiter un payload Airtable volumineux par le contexte (fichiers
   + `robot.airtable`, toujours).

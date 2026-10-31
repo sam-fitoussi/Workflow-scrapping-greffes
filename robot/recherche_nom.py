@@ -10,6 +10,8 @@ société — la recherche web, la devinette d'adresse et Surfe : 0.
 Entrée : le JSON de résultats de l'étape 3 (payload `robot.airtable maj`).
 Les entrées « Non trouvé » sont cherchées par « Prénom Nom » en UN
 lancement du Phantom ; le fichier est réécrit sur place, prêt à pousser.
+Si la recherche échoue (compte LinkedIn déconnecté…), ces entrées passent
+en « À chercher » : jamais enterrées sans avoir été cherchées.
 
 Choix du candidat (règle de Samuel : tenter plutôt qu'enterrer — le
 contrôle d'identité de l'étape 5 écarte un homonyme, et au run suivant la
@@ -137,7 +139,20 @@ def main(f_recherches: str, dossier: str) -> None:
     requetes = sorted({_requete(contexte[e["id"]]) for e in cibles})
     print(f"Recherche par nom : {len(cibles)} fiches, {len(requetes)} requêtes Sales Navigator "
           f"(~{len(requetes) // 2 + 1} min)…", flush=True)
-    resultats = phantoms.rechercher_noms(requetes)
+    try:
+        if not config.PHANTOMBUSTER_API_KEY:
+            raise RuntimeError("PHANTOMBUSTER_API_KEY absent")
+        resultats = phantoms.rechercher_noms(requetes)
+    except Exception as e:
+        # Recherche impossible (compte LinkedIn déconnecté, panne) : ne JAMAIS
+        # enterrer ces fiches en « Non trouvé » sans avoir cherché — elles
+        # restent « À chercher » et repartent au run suivant.
+        for e_ in cibles:
+            e_["fields"][CF["statut"]] = "À chercher"
+        json.dump(payload, open(f_recherches, "w"), ensure_ascii=False)
+        print(f"⛔ Recherche par nom impossible ({str(e)[:150]}) : {len(cibles)} fiche(s) "
+              "laissées « À chercher » (reprises au prochain run). À signaler EN TÊTE du rapport.")
+        return
     json.dump(resultats, open(d / "recherche_nom_brut.json", "w"), ensure_ascii=False)
     par_requete: dict[str, list[dict]] = {}
     for r in resultats:

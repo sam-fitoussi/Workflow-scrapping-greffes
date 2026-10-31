@@ -31,7 +31,7 @@ Verdicts :
   - vérification indisponible (API en panne) → le profil passe quand même
     (on ne bloque pas le pipeline) mais Anomalie est cochée : le trou est
     visible, jamais silencieux.
-  - statut "perimee" (PhantomBuster : « No Linkedin profile found ») → la
+  - statut "perimee" (profil introuvable, 404 Apify) → la
     personne a changé d'adresse LinkedIn : retour en « À chercher »,
     adresse exclue, marqueur « URL périmée » dans Détail — la recherche
     suivante cherche le profil ACTUEL de la même personne (l'identité est
@@ -328,7 +328,7 @@ def main(f_resultats: str, f_contexte: str, prefixe: str) -> None:
                     marqueur = (f"Adresse devinée inexistante le {aujourd_hui} ({url}) — "
                                 "devinette fausse, pas un changement d'adresse.")
                 else:
-                    motif = ("PhantomBuster ne trouve plus ce profil" if statut == "perimee"
+                    motif = ("profil introuvable (404)" if statut == "perimee"
                              else "2e scrape vide")
                     marqueur = (f"URL périmée le {aujourd_hui} ({url}) : {motif} — même "
                                 "personne, adresse changée : chercher son profil actuel.")

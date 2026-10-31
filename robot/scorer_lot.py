@@ -16,8 +16,10 @@ Sorties (préfixe donné en argument) :
 
 Les statuts "erreur" ne sont PAS mis à jour : la fiche reste sans score et
 repart en reliquat au run suivant (une seule relance, cf. RUNBOOK).
-Les statuts "deja_traite" (profil sauté par la déduplication du Phantom)
-non plus : la fiche reste intacte, jamais enterrée en URL morte.
+Les statuts "perimee" / "vide" sont traités en amont par
+robot/verif_identite.py (jamais scorés ici).
+Toutes les écoles et entreprises du parcours sont scorées (Apify lit le
+profil entier) ; à défaut (ancien format), les 2 + 2 champs historiques.
 
 Usage :
     python3 -m robot.scorer_lot resultats.jsonl ref.json contexte.jsonl sortie
@@ -27,7 +29,7 @@ import datetime as dt
 import json
 import sys
 
-from . import config, phantoms, scoring
+from . import config, scoring
 from .note_ia import CHAMPS_PROFIL
 
 CF = config.CHAMPS_FONDATEURS
@@ -52,11 +54,11 @@ JSON_MAX = 6000  # extrait stocké dans Airtable
 
 def _json_borne(extrait: dict, maximum: int = JSON_MAX) -> str:
     """JSON toujours VALIDE sous `maximum` caractères : les textes longs
-    (À propos, compétences) sont raccourcis, jamais le JSON coupé au milieu
+    (parcours, À propos, compétences) sont raccourcis, jamais le JSON coupé au milieu
     (63 extraits illisibles avant ce correctif)."""
     d = dict(extrait)
     texte = json.dumps(d, ensure_ascii=False)
-    for cle in ("linkedinDescription", "linkedinSkillsLabel"):
+    for cle in ("linkedinParcours", "linkedinDescription", "linkedinSkillsLabel"):
         if len(texte) <= maximum:
             break
         if isinstance(d.get(cle), str):
@@ -79,7 +81,7 @@ def main(f_resultats: str, f_ref: str, f_contexte: str, prefixe: str) -> None:
             contexte[c["rec_id"]] = c
 
     maj, a_noter = [], []
-    stats = {"ok": 0, "mort": 0, "erreur": 0, "deja_traite": 0, "score>=1": 0}
+    stats = {"ok": 0, "mort": 0, "erreur": 0, "score>=1": 0}
     aujourd_hui = dt.date.today().strftime("%d/%m")
 
     for l in open(f_resultats):
@@ -88,9 +90,6 @@ def main(f_resultats: str, f_ref: str, f_contexte: str, prefixe: str) -> None:
         r = json.loads(l)
         if r["statut"] == "erreur":
             stats["erreur"] += 1  # reliquat : une seule relance au run suivant
-            continue
-        if r["statut"] == "deja_traite":
-            stats["deja_traite"] += 1  # fiche intacte, reprise au run suivant
             continue
         if r["statut"] == "mort":
             stats["mort"] += 1
@@ -103,20 +102,21 @@ def main(f_resultats: str, f_ref: str, f_contexte: str, prefixe: str) -> None:
             continue
 
         p = r["profil"]
-        _, entreprises = phantoms.extraire_ecoles_entreprises(p)
-        ecoles = scoring.ecoles_diplomantes([
+        paires = [tuple(x) for x in p.get("toutesEcoles") or []] or [
             (p.get("linkedinSchoolName"), p.get("linkedinSchoolDegree")),
-            (p.get("linkedinPreviousSchoolName"), p.get("linkedinPreviousSchoolDegree")),
-        ])
+            (p.get("linkedinPreviousSchoolName"), p.get("linkedinPreviousSchoolDegree"))]
+        entreprises = p.get("toutesEntreprises") or [
+            e for e in (p.get("companyName"), p.get("previousCompanyName")) if e]
+        ecoles = scoring.ecoles_diplomantes(paires)
         doctorat = scoring.a_un_doctorat(
-            [p.get("linkedinSchoolDegree"), p.get("linkedinPreviousSchoolDegree")],
+            [d for _, d in paires],
             [p.get("linkedinHeadline"), p.get("linkedinJobTitle"), p.get("linkedinPreviousJobTitle")])
         score, detail = scoring.scorer_profil(referentiel, ecoles, entreprises, doctorat)
         extrait = {k: p.get(k) for k in CHAMPS_PROFIL if p.get(k) is not None}
         maj.append({"id": r["rec_id"], "fields": {
             CF["score"]: score,
             CF["detail"]: ", ".join(detail) if detail else "—",
-            CF["resume"]: _resume(p, ecoles),
+            CF["resume"]: _resume(p, list(dict.fromkeys(ecoles))),
             CF["json"]: _json_borne(extrait),
         }})
         stats["ok"] += 1

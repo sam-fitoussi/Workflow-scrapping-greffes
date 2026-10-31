@@ -14,11 +14,8 @@ AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY", "")
 ANTHROPIC_API_KEY = (os.environ.get("ROBOT_ANTHROPIC_API_KEY")
                      or os.environ.get("ANTHROPIC_API_KEY", ""))
 PHANTOMBUSTER_API_KEY = os.environ.get("PHANTOMBUSTER_API_KEY", "")
-# Crustdata : parcours COMPLET des profils à noter (le scraper ne remonte
-# que 2 postes et 2 écoles) — cf. robot/parcours.py. Facultatif.
-CRUSTDATA_API_KEY = os.environ.get("CRUSTDATA_API_KEY", "")
-CRUSTDATA_MAX_PAR_RUN = 80  # profils enrichis max par run (1 crédit = 0,30 $ chacun)
-CRUSTDATA_RESERVE = 10      # sous ce solde (crédits), on n'enrichit plus
+# Apify : scraping des profils LinkedIn sans compte (cf. robot/apify.py)
+APIFY_TOKEN = os.environ.get("APIFY_TOKEN") or os.environ.get("APIFY_API_TOKEN", "")
 
 # --- Modèle IA (Note IA + contrôle d'identité) ---
 # Adoption automatique du Sonnet le plus récent (décision de Samuel, 26/08/2026,
@@ -191,9 +188,9 @@ CHAMPS_JOURNAL = {
     "notes": "fldIUKYqke6xnHAX4",
 }
 
-# Champs utiles d'un profil LinkedIn scrapé (PhantomBuster) — partagés par
-# le scraping (détection des scrapes vides), le contrôle d'identité et la
-# Note IA (extrait compact envoyé aux modèles).
+# Champs utiles d'un profil LinkedIn scrapé (format historique du Profile Scraper,
+# reproduit par robot/apify.py) — partagés par le scraping (détection des scrapes vides),
+# le contrôle d'identité et la Note IA (extrait compact envoyé aux modèles).
 CHAMPS_PROFIL_BASE = [
     "linkedinHeadline", "location", "companyName", "linkedinJobTitle",
     "linkedinJobDateRange", "previousCompanyName", "linkedinPreviousJobTitle",
@@ -207,6 +204,8 @@ CHAMPS_PROFIL_BASE = [
 CHAMPS_PROFIL = CHAMPS_PROFIL_BASE + [
     "linkedinSchoolFieldOfStudy", "linkedinPreviousSchoolFieldOfStudy",
     "linkedinPreviousSchoolDateRange", "linkedinSkillsLabel",
+    # parcours complet (toutes expériences, formations, prix) — robot/apify.py
+    "linkedinParcours",
 ]
 
 
@@ -218,19 +217,19 @@ def champs_remplis(profil: dict) -> int:
     compté comme vide, au même titre que None, "" ou []."""
     return sum(1 for k in CHAMPS_PROFIL_BASE if profil.get(k))
 
-# --- PhantomBuster (workspace « Samuel's workspace », compte LinkedIn de
-# Samuel connecté via l'extension ; bascule du 16/09/2026) ---
-PHANTOM_SCRAPER_ID = "4413122660053115"      # Robot sourcing - LinkedIn Profile Scraper
+# --- PhantomBuster : seulement la recherche par nom (Sales Navigator) ---
 PHANTOM_RECHERCHE_NOM_ID = "737480332830394"  # Robot sourcing - Recherche par nom (Sales Navigator Search Export)
-# Plafond de profils scrapés par jour. PhantomBuster indique 1000-1500/jour
-# sans risque sur un compte LinkedIn standard ; 300 garde une marge x3-5
-# (compte partagé avec d'autres automatisations). Toujours séquentiel.
+
+# --- Scraping des profils (Apify, sans le compte LinkedIn de Samuel) ---
+# Plafond de profils scrapés par jour : garde-fou de coût (0,004 $ par
+# profil), plus une contrainte LinkedIn.
 SCRAPE_DAILY_CAP = 300
+SCRAPE_LOT = 15  # profils par appel Apify (~1 min)
 # Une commande de fond est coupée à 2 h : scraping_lot s'arrête proprement
-# avant, entre deux profils (le runbook le relance une fois, reprise par rec_id).
+# avant, entre deux lots (reprise par rec_id).
 SCRAPE_ECHEANCE_MIN = 105
-# Erreurs techniques d'affilée avant d'arrêter le lot (cookie LinkedIn expiré ?)
-SCRAPE_ERREURS_MAX = 3
+# Lots en échec d'affilée avant d'arrêter (panne Apify)
+SCRAPE_ERREURS_MAX = 2
 
 # --- Périmètre Pappers ---
 # Formes juridiques : SAS (5710) et SASU (5720)
