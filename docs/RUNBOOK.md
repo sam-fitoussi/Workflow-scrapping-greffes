@@ -407,7 +407,7 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
    (barème : source de vérité = table Prompts d'Airtable, relue à chaque
    run — `robot/note_ia_prompt.md` n'est qu'une copie de secours, le
    modifier est SANS EFFET tant qu'Airtable répond ;
-   modèle = Sonnet le plus récent résolu
+   modèle = Sonnet le plus récent (raisonnement « xhigh »), résolu
    automatiquement par `config.modele_ia` — rien à signaler à ce sujet,
    SAUF le repli sur le modèle par défaut marqué ⚠️ au lancement, qui
    est un mode dégradé à mentionner dans le rapport ; notation DURE ;

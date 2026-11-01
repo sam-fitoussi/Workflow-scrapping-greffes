@@ -85,9 +85,14 @@ def noter(profil_ligne: dict, system: str) -> dict:
         "https://api.anthropic.com/v1/messages",
         data=json.dumps({
             "model": config.modele_ia(),
-            # thinking adaptatif par défaut sur Sonnet 5+ : les tokens de
-            # réflexion comptent dans max_tokens — 300 tronquerait la réponse
-            "max_tokens": 4000,
+            # Raisonnement « xhigh » (banc d'essai du 01/11/2026 sur 36 profils :
+            # au niveau par défaut « high », Sonnet ignorait le plafond
+            # « holding / conseil » et l'exception « chercheur exceptionnel » du
+            # barème ; xhigh les applique, pour +19 % de coût — « max » n'apporte
+            # rien de plus). Les tokens de réflexion comptent dans max_tokens :
+            # marge très large pour ne jamais couper la réponse.
+            "max_tokens": 32000,
+            "output_config": {"effort": "xhigh"},
             # Barème fixe pour tout le run : mis en cache (lectures à ~10 % du prix,
             # cache de 5 min rafraîchi à chaque appel).
             "system": [{"type": "text", "text": system,
@@ -100,7 +105,7 @@ def noter(profil_ligne: dict, system: str) -> dict:
             "content-type": "application/json",
         },
     )
-    with urllib.request.urlopen(req) as r:
+    with urllib.request.urlopen(req, timeout=600) as r:
         resp = json.load(r)
     if resp.get("stop_reason") == "refusal":
         raise RuntimeError("réponse refusée par le modèle (stop_reason=refusal)")
