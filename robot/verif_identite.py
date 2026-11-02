@@ -193,24 +193,27 @@ def verifier(ligne: dict, contexte: dict, seul_candidat: bool = False) -> dict:
         v.update(verdict="ok", doute=True, requalifie=True,
                  raison="[écartement requalifié par le garde-fou : aucune contradiction "
                         "de dates ni de pays] " + v["raison"])
-    # Candidat unique (statut « Trouvé ») : seuil durci, appliqué par le code —
-    # un pays différent seul, ou un écart de dates de moins de 3 ans, ne suffit
-    # pas à écarter la seule personne indexée à ce nom (constaté le 30/10 :
-    # Master 2 « à 20 ans », profil à Rabat d'une dirigeante de Poitiers).
-    # Un écart d'âge d'au moins 10 ans reste une contradiction de dates même
-    # si le modèle l'étiquette « autre_pays » (constaté le 01/11 : étudiant
-    # à Hanoï né vers 2004, dirigeant du greffe né en 1984, réintégré à tort).
-    # Seuil volontairement large : jamais rater un bon profil sur une erreur
-    # de jugement ou un petit décalage de dates.
+    # Écart d'âge : seuil de 10 ans, appliqué par le code à TOUS les profils
+    # (décision de Samuel du 02/11/2026 — jamais rater un bon profil sur une
+    # erreur de jugement ou un petit décalage de dates : bac précoce, cursus
+    # étranger, dates mal saisies). Sous 10 ans, une contradiction de dates
+    # n'écarte pas : le profil passe avec « doute ». À 10 ans ou plus, c'est
+    # une contradiction de dates même si le modèle l'étiquette « autre_pays »
+    # (constaté le 01/11 : étudiant à Hanoï né vers 2004, dirigeant du greffe
+    # né en 1984, réintégré à tort).
     if v["contradiction"] == "autre_pays" and ecart >= 10:
         v["contradiction"] = "dates"
-    if v["verdict"] == "mauvais" and seul_candidat and (
-            v["contradiction"] == "autre_pays"
-            or (v["contradiction"] == "dates" and ecart < 3)):
+    if v["verdict"] == "mauvais" and v["contradiction"] == "dates" and ecart < 10:
+        v.update(verdict="ok", doute=True, requalifie=True,
+                 raison=f"[écartement requalifié : écart de dates insuffisant ({ecart} an(s), "
+                        f"seuil 10)] " + v["raison"])
+    # Candidat unique (statut « Trouvé ») : un pays différent seul ne suffit
+    # pas à écarter la seule personne indexée à ce nom (constaté le 30/10 :
+    # profil à Rabat d'une dirigeante de Poitiers).
+    if v["verdict"] == "mauvais" and seul_candidat and v["contradiction"] == "autre_pays":
         v.update(verdict="ok", doute=True, requalifie=True,
                  raison=f"[écartement requalifié : candidat unique, contradiction "
-                        f"{v['contradiction']} insuffisante (écart {ecart} an(s))] "
-                        + v["raison"])
+                        f"autre_pays insuffisante (écart {ecart} an(s))] " + v["raison"])
     return v
 
 

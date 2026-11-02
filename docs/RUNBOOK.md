@@ -371,11 +371,13 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
    scoré qu'une fiche enterrée). Écarter exige une CONTRADICTION
    POSITIVE d'identité : dates du profil incompatibles avec l'âge du
    greffe, ou profil établissant manifestement une autre personne.
-   Seuil DURCI pour un candidat « Trouvé » (seul profil à ce nom, ou
-   société du greffe sur le profil) — appliqué par le script, pas par le
-   modèle : un pays différent seul n'écarte jamais, et une contradiction de
-   dates n'écarte que si l'écart estimé atteint 3 ans (un an ou deux
-   d'avance — bac précoce, cursus étranger — passe avec « doute »). Un
+   Seuils appliqués par le script, pas par le modèle : une contradiction
+   de dates n'écarte que si l'écart estimé atteint 10 ans, pour TOUS les
+   profils (décision de Samuel : jamais rater un bon profil sur une erreur
+   de jugement ou un petit décalage de dates — en dessous, le profil passe
+   avec « doute ») ; pour un candidat « Trouvé » (seul profil à ce nom, ou
+   société du greffe sur le profil), un pays différent seul n'écarte
+   jamais. Un
    profil gardé sans corroboration malgré des discordances porte la
    mention « Identité non corroborée » dans Détail score — Samuel
    tranche à l'œil, sans Anomalie. Le juge reçoit les cofondateurs de
