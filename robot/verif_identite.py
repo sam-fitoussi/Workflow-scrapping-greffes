@@ -197,6 +197,13 @@ def verifier(ligne: dict, contexte: dict, seul_candidat: bool = False) -> dict:
     # un pays différent seul, ou un écart de dates de moins de 3 ans, ne suffit
     # pas à écarter la seule personne indexée à ce nom (constaté le 30/10 :
     # Master 2 « à 20 ans », profil à Rabat d'une dirigeante de Poitiers).
+    # Un écart d'âge d'au moins 10 ans reste une contradiction de dates même
+    # si le modèle l'étiquette « autre_pays » (constaté le 01/11 : étudiant
+    # à Hanoï né vers 2004, dirigeant du greffe né en 1984, réintégré à tort).
+    # Seuil volontairement large : jamais rater un bon profil sur une erreur
+    # de jugement ou un petit décalage de dates.
+    if v["contradiction"] == "autre_pays" and ecart >= 10:
+        v["contradiction"] = "dates"
     if v["verdict"] == "mauvais" and seul_candidat and (
             v["contradiction"] == "autre_pays"
             or (v["contradiction"] == "dates" and ecart < 3)):
