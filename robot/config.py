@@ -118,6 +118,7 @@ CHAMPS_REVUE = {
 # Les 4 canaux sources de la Revue. Par canal : la table, le champ lien dans
 # Revue, et les champs lus par robot/revue.py. Le « Jour » d'une ligne Revue
 # est la date du run qui l'a découverte (pas une date lue dans le canal).
+NON_VIDE = "(non vide)"  # valeur de filtre : champ simplement rempli
 CANAUX_REVUE = {
     "Pappers": {
         "table": TABLE_FONDATEURS, "lien": "fldSUju9p2xxMxN8q",
@@ -126,6 +127,12 @@ CANAUX_REVUE = {
         "siren": "fldJAGwDDXJBbT8fZ",
         "role": "fldXs4LLWRFCzZ4vX", "ville": "fldFMhPBQaBibMqgx",
         "url": "fldOuQobUTZdWT8iz", "resume": "fldcCc78Gb1WGWoUL",
+        # N'entre dans Revue qu'une fois TRAITÉE (Score rempli, et Note IA si
+        # score >= 1) : une fiche pas finie à l'heure de la Revue arrive le
+        # lendemain, notée (et dans l'e-mail du matin), au lieu d'une ligne
+        # vide rangée dans un groupe déjà lu (cas du 31/10/2026).
+        "filtre": ("fld9vwNO3qNOoqbe4", NON_VIDE),
+        "note_si_score": ("fld9vwNO3qNOoqbe4", "fldDARjR1pwhcxxxM"),
     },
     "Evertrace": {
         "table": "tblaGXJ4SVt6e2fiZ", "lien": "fld4bea7jnTcJtd0o",

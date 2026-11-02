@@ -34,7 +34,9 @@ relancer le script ne crée aucun doublon. État durable = Airtable seul.
 
 Un canal peut porter un « filtre » (champ, valeur) : seules ses fiches qui
 le satisfont entrent dans Revue (Sales Navigator : Signal startup = 1 —
-les autres fiches ne portent aucun signal de création d'entreprise).
+les autres fiches ne portent aucun signal de création d'entreprise ;
+Pappers : fiche traitée, Score rempli et Note IA si score >= 1 — une fiche
+pas finie entre au run suivant, notée, plutôt que vide).
 
 Usage : python3 -m robot.revue                 (run quotidien)
         python3 -m robot.revue --essai         (à blanc : rien n'est écrit)
@@ -49,7 +51,7 @@ import re
 import sys
 import zoneinfo
 
-from . import airtable, config
+from . import airtable, config, email_revue
 
 PARIS = zoneinfo.ZoneInfo("Europe/Paris")
 CR = config.CHAMPS_REVUE
@@ -70,14 +72,21 @@ def _lignes_canal(nom_canal: str, denominations: dict[str, str]) -> list[dict]:
     champs.append(config.VU_SOURCES_REVUE[nom_canal])
     if filtre:
         champs.append(filtre[0])
+    note_si_score = c.get("note_si_score")
+    if note_si_score:
+        champs += list(note_si_score)
     lignes = []
     for r in airtable.lire_table(c["table"], champs):
         f = r["fields"]
         slug = f.get(c["slug"])
         if not slug:
             continue  # pas de profil LinkedIn identifié : pas examinable
-        if filtre and f.get(filtre[0]) != filtre[1]:
-            continue  # hors du périmètre Revue de ce canal
+        if filtre and (f.get(filtre[0]) is None if filtre[1] == config.NON_VIDE
+                       else f.get(filtre[0]) != filtre[1]):
+            continue  # hors du périmètre Revue de ce canal (ou pas encore traitée)
+        if note_si_score and (f.get(note_si_score[0]) or 0) >= 1 \
+                and f.get(note_si_score[1]) is None:
+            continue  # scorée mais pas encore notée : elle entrera au run suivant
         societe = (denominations.get(f.get(c["siren"])) if c["siren"]
                    else f.get(c["societe"]))
         lignes.append({
@@ -243,6 +252,10 @@ def main(essai: bool = False, historique: bool = False) -> None:
           + (f" ; {len({m['id'] for m in remontees})} profils non vus remontés (nouveau signal)"
              if remontees else "")
           + ".")
+    if not essai and not historique:
+        # E-mail du matin (profils non vus à 13/20 ou plus) — un échec
+        # d'envoi n'affecte pas la Revue, il est signalé par un ⚠️
+        email_revue.envoyer(jour_du_run)
 
 
 if __name__ == "__main__":
