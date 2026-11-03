@@ -36,7 +36,8 @@ Un canal peut porter un « filtre » (champ, valeur) : seules ses fiches qui
 le satisfont entrent dans Revue (Sales Navigator : Signal startup = 1 —
 les autres fiches ne portent aucun signal de création d'entreprise ;
 Pappers : fiche traitée, Score rempli et Note IA si score >= 1 — une fiche
-pas finie entre au run suivant, notée, plutôt que vide).
+pas finie entre au run suivant, notée, plutôt que vide ; Evertrace : un
+signal « Left Position » n'entre qu'à 13/20 ou plus).
 
 Usage : python3 -m robot.revue                 (run quotidien)
         python3 -m robot.revue --essai         (à blanc : rien n'est écrit)
@@ -75,6 +76,9 @@ def _lignes_canal(nom_canal: str, denominations: dict[str, str]) -> list[dict]:
     note_si_score = c.get("note_si_score")
     if note_si_score:
         champs += list(note_si_score)
+    seuil_left = c.get("seuil_left")
+    if seuil_left:
+        champs += list(seuil_left[:2])
     lignes = []
     for r in airtable.lire_table(c["table"], champs):
         f = r["fields"]
@@ -87,6 +91,9 @@ def _lignes_canal(nom_canal: str, denominations: dict[str, str]) -> list[dict]:
         if note_si_score and (f.get(note_si_score[0]) or 0) >= 1 \
                 and f.get(note_si_score[1]) is None:
             continue  # scorée mais pas encore notée : elle entrera au run suivant
+        if seuil_left and est_left_position(f.get(seuil_left[0])) \
+                and (f.get(seuil_left[1]) is None or f.get(seuil_left[1]) < seuil_left[2]):
+            continue  # simple départ d'un poste : seulement les top profils (ou pas encore notée)
         societe = (denominations.get(f.get(c["siren"])) if c["siren"]
                    else f.get(c["societe"]))
         lignes.append({
@@ -100,6 +107,12 @@ def _lignes_canal(nom_canal: str, denominations: dict[str, str]) -> list[dict]:
             "signal": _dernier_signal(f.get(c["signal"])) if c.get("signal") else None,
         })
     return lignes
+
+
+def est_left_position(type_signal) -> bool:
+    """Signal Evertrace « Left Position » (libellé normalisé)."""
+    t = type_signal.get("name") if isinstance(type_signal, dict) else type_signal
+    return (t or "").strip().lower().replace("_", " ") == "left position"
 
 
 def _dernier_signal(notes: str | None) -> str | None:

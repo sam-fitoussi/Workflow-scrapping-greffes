@@ -15,7 +15,10 @@ Fondateurs (Evertrace), France (The Veck), International (The Veck),
 Sales Navigator (uniquement ses fiches à Signal startup = 1 : les autres
 ne portent aucun signal de création d'entreprise) ; les fiches Pappers
 n'entrent qu'une fois traitées (Score rempli, et Note IA si score ≥ 1) :
-une fiche pas finie à l'heure de la Revue arrive le lendemain, notée — en une ligne par profil découvert par le run, dédoublonnée par slug
+une fiche pas finie à l'heure de la Revue arrive le lendemain, notée ;
+les signaux Evertrace « Left Position » (simple départ d'un poste)
+n'entrent qu'à 13/20 ou plus (et attendent leur note) — le robot Evertrace
+ne garde ce type que si TOUS les signaux de la personne sont des départs — en une ligne par profil découvert par le run, dédoublonnée par slug
 LinkedIn. « Jour » = la DATE DU RUN (heure de Paris), pas une date lue
 dans le canal : tout ce qui apparaît dans la Revue apparaît dans le
 groupe du matin où Samuel va le lire, y compris les fiches arrivées la
@@ -53,12 +56,14 @@ regarde chaque matin, groupée par « Jour », filtrée sur « Vu » décoché.
    (une seule ligne par profil non vu, voulu). Il n'y a rien à reconstituer ni
    à ventiler soi-même. Zéro création est NORMAL si les canaux n'ont
    rien remonté — ce n'est pas une erreur.
-   Le script envoie ensuite l'**e-mail du matin** à Samuel
-   (`robot/email_revue.py`) : les profils du jour NON VUS notés 13/20 ou
-   plus — nom (lien LinkedIn), note, sources (lien vers la fiche
-   Evertrace), ville, X, société — ou un court e-mail s'il n'y en a
-   aucun. Envoi par le Zap « revue-email-du-matin » (webhook → Outlook de
-   Samuel), adresse dans la variable `REVUE_EMAIL_WEBHOOK`. Sortie
+   Le script envoie ensuite l'**e-mail du matin** à Samuel, Bruno, Pierre
+   et Lio (`robot/email_revue.py`) : « Sourcing du 3 nov : N bons
+   profils. » — les profils du jour NON VUS notés 13/20 ou plus : nom
+   (lien LinkedIn), note, sources (lien vers la fiche Evertrace), ville,
+   X, société — ou « Aucun bon profil remonté aujourd'hui par nos agents,
+   désolé ! ». Envoi par le Zap « revue-email-du-matin » (webhook →
+   Outlook de Samuel ; destinataires fixés DANS le Zap, champ `test: true`
+   = Samuel seul), adresse dans la variable `REVUE_EMAIL_WEBHOOK`. Sortie
    « E-mail du matin envoyé : … » ; un « ⚠️ E-mail du matin non
    envoyé » (variable absente, Zapier en panne) n'affecte pas la Revue
    mais doit être recopié dans la PushNotification.

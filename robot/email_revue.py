@@ -1,5 +1,8 @@
 """E-mail du matin : les profils remontés dans Revue ce jour-là, NON VUS,
-notés 13/20 ou plus — envoyé à Samuel à la fin de robot/revue.py.
+notés 13/20 ou plus — envoyé à la fin de robot/revue.py à Samuel, Bruno,
+Pierre et Lio (destinataires fixés dans le Zap, pas ici).
+Objet : « Sourcing du 3 nov : 9 bons profils. » (« 1 bon profil. »,
+« aucun bon profil. »).
 
 Construit ici, de façon déterministe (liste, tri, mise en forme) ; l'envoi
 passe par un Zap (« Catch Hook » → Microsoft Outlook « Send Email » depuis
@@ -10,7 +13,8 @@ affectée : un message ⚠️ le signale dans la sortie de la routine.
 Une ligne par profil, de la meilleure note à la moins bonne :
   Nom (lien LinkedIn) — 15/20 · Sources (Evertrace : lien vers la fiche) ·
   Ville · X (lien, si connu) · Société
-Jour sans profil à 13 ou plus : un court e-mail le dit.
+Jour sans profil à 13 ou plus : « Aucun bon profil remonté aujourd'hui par
+nos agents, désolé ! ».
 « Non vu » = case Vu de la ligne Revue décochée au moment de l'envoi (la
 règle des 60 jours est appliquée en amont, à la création de la ligne).
 
@@ -53,6 +57,7 @@ RECHERCHES_EVERTRACE = {
     "Bonnes unis fr/suisse/lux/belg - rest of world": "sch_zLNuBMQuZgLJE1ZB",
 }
 RECHERCHE_PAR_DEFAUT = "sch_qVNrxM7fJPCApxn8"
+MOIS = ["jan", "fév", "mars", "avr", "mai", "juin", "juil", "août", "sept", "oct", "nov", "déc"]
 CANAUX = ["Pappers", "Evertrace", "The Veck FR", "The Veck INT", "Sales Navigator"]
 
 
@@ -89,7 +94,8 @@ def construire(jour: str) -> dict:
     fiches_ev = {}
     if any(r["fields"].get(F_LIEN_EVERTRACE) for r in hautes):
         fiches_ev = {r["id"]: r["fields"] for r in airtable.lire_table(EV_TABLE, [EV_SIGNAL, EV_FILTRES])}
-    date = dt.date.fromisoformat(jour).strftime("%d/%m")
+    d = dt.date.fromisoformat(jour)
+    date = f"{d.day} {MOIS[d.month - 1]}"  # « 3 nov », « 17 jan »
 
     items = []
     for r in hautes:
@@ -111,16 +117,12 @@ def construire(jour: str) -> dict:
     pied = f'<p><a href="{URL_REVUE}">Ouvrir la Revue</a></p>'
     if hautes:
         n = len(hautes)
-        sujet = f"Revue du {date} : {n} profil{'s' if n > 1 else ''} à {SEUIL}/20 ou plus"
+        sujet = f"Sourcing du {date} : {n} bon{'s' if n > 1 else ''} profil{'s' if n > 1 else ''}."
         corps = "<ul>" + "".join(items) + "</ul>" + pied
     else:
-        notes = [r["fields"].get(F_NOTE) for r in lignes if r["fields"].get(F_NOTE) is not None]
-        sujet = f"Revue du {date} : aucun profil à {SEUIL}/20 ou plus"
-        corps = (f"<p>{len(lignes)} profil{'s' if len(lignes) > 1 else ''} non vu"
-                 f"{'s' if len(lignes) > 1 else ''} remonté{'s' if len(lignes) > 1 else ''} ce matin"
-                 + (f", meilleure note {max(notes)}/20" if notes else "") + ".</p>" + pied)
-    return {"sujet": sujet, "html": corps, "nb": len(hautes),
-            "destinataire": "samuel@frst.vc"}
+        sujet = f"Sourcing du {date} : aucun bon profil."
+        corps = "<p>Aucun bon profil remonté aujourd'hui par nos agents, désolé !</p>"
+    return {"sujet": sujet, "html": corps, "nb": len(hautes)}
 
 
 def envoyer(jour: str | None = None, essai: bool = False) -> None:

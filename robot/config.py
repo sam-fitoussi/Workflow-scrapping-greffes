@@ -143,6 +143,12 @@ CANAUX_REVUE = {
         # Notes robot : « nouveau signal le JJ/MM » quand Evertrace FUSIONNE
         # un signal dans la fiche (< 15 j après le précédent) — cf. revue.py
         "signal": "fld2PlypCqoMWE6cp",
+        # « Left Position » (départ d'un poste, sans création en vue) : n'entre
+        # dans Revue qu'à 13/20 ou plus (décision de Samuel du 03/11/2026 : un
+        # simple départ ne vaut un outreach que pour un top profil) ; pas encore
+        # notée -> attend. Le robot Evertrace ne garde ce type que si TOUS les
+        # signaux de la personne sont des départs.
+        "seuil_left": ("fldyFBCJZlZAKYa7s", "fldNHkqeCexIsVD3D", 13),
     },
     "The Veck FR": {
         "table": "tblVJTIAezbM0Ab3H", "lien": "fldHxjvsEVyA3M3tx",
