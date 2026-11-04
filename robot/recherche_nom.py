@@ -150,10 +150,9 @@ def choisir(c: dict, resultats: list[dict], exclues: set[str]) -> tuple[str, dic
     return None
 
 
-def main(f_recherches: str, dossier: str) -> None:
-    d = Path(dossier)
-    payload = json.load(open(f_recherches))
-    contexte = {c["rec_id"]: c for c in (json.loads(l) for l in open(d / "contexte.jsonl") if l.strip())}
+def charger_exclues(d: Path) -> dict[str, set[str]]:
+    """{rec_id: slugs à ne plus proposer} (homonymes écartés, adresses
+    périmées), lus dans reliquat_a_chercher.jsonl."""
     exclues: dict[str, set[str]] = {}
     f_ac = d / "reliquat_a_chercher.jsonl"
     if f_ac.exists():
@@ -162,6 +161,18 @@ def main(f_recherches: str, dossier: str) -> None:
                 x = json.loads(l)
                 exclues[x["rec_id"]] = {_slug(u) for u in
                                         x.get("urls_exclues", []) + x.get("urls_perimees", [])}
+    return exclues
+
+
+def url_propre(url: str) -> str:
+    return "https://www.linkedin.com/in/" + urllib.parse.quote(_slug(url))
+
+
+def main(f_recherches: str, dossier: str) -> None:
+    d = Path(dossier)
+    payload = json.load(open(f_recherches))
+    contexte = {c["rec_id"]: c for c in (json.loads(l) for l in open(d / "contexte.jsonl") if l.strip())}
+    exclues = charger_exclues(d)
 
     cibles = [e for e in payload if e["fields"].get(CF["statut"]) == "Non trouvé"
               and not e["fields"].get(CF["linkedin_url"]) and e["id"] in contexte]

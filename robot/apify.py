@@ -118,6 +118,59 @@ def rechercher_nom(prenom: str, nom: str, france: bool = False, timeout_s: int =
     return [it for it in _appel(req, timeout_s) or [] if it.get("linkedinUrl")]
 
 
+ACTEUR_GOOGLE = "apify~google-search-scraper"
+PRIX_GOOGLE = 0.0025  # $ par page de résultats (palier BRONZE)
+
+
+def google(requetes: list[str], timeout_s: int = 300) -> dict[str, list[dict]]:
+    """Recherche Google (google.fr, en français) : {requête: résultats
+    organiques [{title, websiteTitle, url, description}]}, 10 au plus par
+    requête, un seul appel pour tout le lot. Couvre mieux la France que
+    l'outil WebSearch de la session (biaisé US, refuse certaines requêtes
+    sur des noms de personnes)."""
+    if not config.APIFY_TOKEN:
+        raise ApifyIndisponible("APIFY_TOKEN absent")
+    if not requetes:
+        return {}
+    req = urllib.request.Request(
+        f"https://api.apify.com/v2/acts/{ACTEUR_GOOGLE}/run-sync-get-dataset-items?"
+        + urllib.parse.urlencode({"maxTotalChargeUsd": max(0.5, round(PRIX_GOOGLE * len(requetes) * 2 + 0.05, 3)),  # plancher de l'acteur
+                                  "timeout": timeout_s}),
+        data=json.dumps({"queries": "\n".join(requetes), "countryCode": "fr",
+                         "languageCode": "fr", "maxPagesPerQuery": 1, "resultsPerPage": 10,
+                         "saveHtml": False, "saveHtmlToKeyValueStore": False}).encode(),
+        headers={"Authorization": f"Bearer {config.APIFY_TOKEN}",
+                 "Content-Type": "application/json"})
+    out: dict[str, list[dict]] = {}
+    for page in _appel(req, timeout_s) or []:
+        terme = (page.get("searchQuery") or {}).get("term")
+        if terme is not None:
+            out.setdefault(terme, []).extend(page.get("organicResults") or [])
+    return out
+
+
+ACTEUR_EMPLOYES = "harvestapi~linkedin-company-employees"
+PRIX_EMPLOYES = 0.02 + 0.004 * 30  # $ : démarrage + 30 profils courts au plus
+
+
+def employes(url_societe: str, max_items: int = 30, timeout_s: int = 180) -> list[dict]:
+    """Personnes rattachées à une page société LinkedIn (profils courts :
+    {firstName, lastName, headline, linkedinUrl, location}). Une société
+    tout juste immatriculée n'a que ses fondateurs et quelques proches :
+    le fondateur y figure même sous un nom masqué ou un pseudonyme."""
+    if not config.APIFY_TOKEN:
+        raise ApifyIndisponible("APIFY_TOKEN absent")
+    req = urllib.request.Request(
+        f"https://api.apify.com/v2/acts/{ACTEUR_EMPLOYES}/run-sync-get-dataset-items?"
+        + urllib.parse.urlencode({"maxTotalChargeUsd": max(0.05, round(PRIX_EMPLOYES * 1.5, 3)),
+                                  "timeout": timeout_s}),
+        data=json.dumps({"profileScraperMode": "Short ($4 per 1k)", "companies": [url_societe],
+                         "maxItems": max_items}).encode(),
+        headers={"Authorization": f"Bearer {config.APIFY_TOKEN}",
+                 "Content-Type": "application/json"})
+    return [it for it in _appel(req, timeout_s) or [] if it.get("linkedinUrl")]
+
+
 def introuvable(item: dict) -> bool:
     return item.get("status") == 404 or "not found" in str(item.get("error") or "").lower()
 

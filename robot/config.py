@@ -240,6 +240,14 @@ SCRAPE_ECHEANCE_MIN = 105
 # Lots en échec d'affilée avant d'arrêter (panne Apify)
 SCRAPE_ERREURS_MAX = 2
 
+# --- Filets de recherche après la recherche par nom (robot/recherche_societe.py) ---
+# Pages société LinkedIn dont on lit les membres, par run (~0,03 $ chacune)
+FILET_SOCIETE_MAX_PAGES = 30
+# Homonymes : fiches départagées par run, et candidats scrapés par fiche
+# (0,004 $ le profil : 25 × 6 = 0,60 $ au plus)
+FILET_HOMONYMES_MAX_FICHES = 25
+FILET_HOMONYMES_CANDIDATS = 6
+
 # --- Périmètre Pappers ---
 # Formes juridiques : SAS (5710) et SASU (5720)
 CATEGORIES_JURIDIQUES = "5710,5720"
