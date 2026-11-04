@@ -18,6 +18,7 @@ main » que là où il apporte un jugement :
 | Sondage des dates, tirage, filtres, insertion Airtable, Journal | script | `python3 -m robot.run` |
 | Reconstruction du reliquat + contexte | script | `python3 -m robot.reliquat` |
 | Recherche LinkedIn | modèle | recherches web + jugement |
+| Filets de recherche (Google, nom, société, homonymes) | script | `robot.recherche_google` → `robot.recherche_nom` → `robot.recherche_societe` |
 | Écriture des URLs trouvées dans Airtable | script | `python3 -m robot.airtable maj` |
 | Scraping des profils | script en tâche de fond | `python3 -m robot.scraping_lot` |
 | Contrôle d'identité (anti-homonymes) | script | `python3 -m robot.verif_identite` |
@@ -79,8 +80,12 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
   intactes (reprises au run suivant) — le signaler EN TÊTE du rapport.
   La recherche LinkedIn par nom (`robot/recherche_nom.py`) passe aussi
   par Apify (acteur `harvestapi/linkedin-profile-search-by-name`, 0,004 $
-  par nom). Le robot n'utilise plus PhantomBuster ni le compte LinkedIn
-  de Samuel.
+  par nom), comme les filets de l'étape 3 : Google
+  (`apify/google-search-scraper`, 0,0025 $ la requête,
+  `robot/recherche_google.py`) et les membres d'une page société
+  (`harvestapi/linkedin-company-employees`, ~0,03 $ la page,
+  `robot/recherche_societe.py`). Le robot n'utilise plus PhantomBuster
+  ni le compte LinkedIn de Samuel.
 - Clés API (`PAPPERS_API_KEY`, `AIRTABLE_API_KEY` (PAT), `APIFY_TOKEN`,
   `ROBOT_ANTHROPIC_API_KEY`) : leur place est
   dans les **variables d'environnement de l'environnement d'exécution**
@@ -292,14 +297,44 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
        "fldgf0zCUWs3jT2qB": "Recherche web"}}]
    ```
    (champs : statut « Trouvé / Ambigu / Non trouvé » ; URL LinkedIn, à
-   omettre si non trouvé ; méthode : « Recherche web »). Puis (quelques
-   secondes par nom) :
-   `python3 -m robot.recherche_nom /tmp/run_du_jour/recherches.json /tmp/run_du_jour`
-   — le script cherche les « Non trouvé » par « Prénom Nom », retient le
-   candidat le plus probable (règle de Samuel : tenter plutôt
-   qu'enterrer, le contrôle de l'étape 5 tranche) et réécrit le fichier
-   (méthode « Recherche par nom »). Ne pas re-trier ses choix à la
-   main. Enfin `python3 -m robot.airtable maj tblBngzHytB48MiDK /tmp/run_du_jour/recherches.json`.
+   omettre si non trouvé ; méthode : « Recherche web »). Puis les
+   **trois filets scriptés, dans cet ordre** (chacun ne reprend que les
+   « Non trouvé » laissés par le précédent et réécrit le fichier sur
+   place ; ne pas re-trier leurs choix à la main) :
+   1. `python3 -m robot.recherche_google /tmp/run_du_jour/recherches.json /tmp/run_du_jour`
+      — Google (google.fr) via Apify, JUSTE APRÈS la recherche web :
+      mieux indexé en France que l'outil WebSearch, sans ses refus sur
+      les noms de personnes. Filet PRÉCIS : « Trouvé » seulement si la
+      société du greffe est dans l'extrait, « Ambigu » si candidat unique
+      ET ville concordante ; sinon la fiche passe au filet suivant
+      (méthode « Recherche Google »).
+   2. `python3 -m robot.recherche_nom /tmp/run_du_jour/recherches.json /tmp/run_du_jour`
+      (quelques secondes par nom) — recherche interne LinkedIn par
+      « Prénom Nom », retient le candidat le plus probable (règle de
+      Samuel : tenter plutôt qu'enterrer, le contrôle de l'étape 5
+      tranche ; méthode « Recherche par nom »).
+   3. `python3 -m robot.recherche_societe /tmp/run_du_jour/recherches.json /tmp/run_du_jour`
+      — filets société et homonymes : (A) Google par nom de société ;
+      (B) membres de la page LinkedIn de la société, page lue sur le
+      profil d'un cofondateur déjà trouvé (ou via Google) — le fondateur
+      y figure même sous un nom masqué ; (C) au-delà de 3 homonymes
+      indiscernables à la recherche par nom, les 6 premiers sont scrapés
+      et départagés sur pièces (société, ville, point commun avec un
+      cofondateur, dates vs naissance) → « Ambigu » seulement s'il y a
+      un signal d'identité et un vainqueur net (méthodes « Filet société
+      (Google) », « Filet société (page LinkedIn) », « Filet
+      homonymes »). Les profils qu'il scrape (cofondateurs, candidats
+      retenus) sont versés dans `/tmp/run_du_jour/resultats.jsonl` :
+      la vague 2 les saute (jamais deux fois le même scrape), et ils
+      comptent dans le plafond de 300. Il peut tourner pendant la
+      vague 1 (il ne touche jamais aux fiches du reliquat à scraper).
+      Coût typique : 1 à 2 $ par run. Panne Apify : les fiches restent
+      « Non trouvé », rien à faire.
+   Banc d'essai du 04/11/2026 sur 120 « Non trouvé » historiques
+   (chaîne complète, puis scraping et contrôle d'identité de l'étape 5) :
+   57 fondateurs retrouvés ET confirmés — Google 11/11 confirmés, page
+   société 2/2, homonymes 2/2, recherche par nom 42/52.
+   Enfin `python3 -m robot.airtable maj tblBngzHytB48MiDK /tmp/run_du_jour/recherches.json`.
    Si la recherche échoue (clé Apify absente, panne), le script passe
    lui-même ces fiches en « À chercher » (jamais enterrées sans avoir été
    cherchées) : pousser le fichier et le signaler EN TÊTE du rapport. Pour une fiche qui était en Anomalie
@@ -315,7 +350,7 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
      recherches, elle n'en dépend pas) :
      `python3 -m robot.scraping_lot /tmp/run_du_jour/reliquat_scrape.jsonl /tmp/run_du_jour/resultats`
    - **Vague 2 — les URLs du jour, une fois TOUTES les recherches
-     faites** (recherche par nom comprise) : écrire la file JSONL (`{"rec_id", "url"}` par ligne) et
+     faites** (filets de l'étape 3 compris) : écrire la file JSONL (`{"rec_id", "url"}` par ligne) et
      relancer la même commande avec ce fichier et le MÊME préfixe
      `resultats` — la reprise par rec_id saute ce qui est déjà scrapé,
      c'est sûr par construction. (Les recherches par lots durent
@@ -432,7 +467,8 @@ docs/REVUE.md) : le robot Pappers ne la lit ni ne l'écrit.
    rapport français lisible et y ajouter ce que le script ne voit pas
    (coût Pappers + solde depuis la sortie de robot.run — l'alerte
    solde < 50 EN TÊTE du rapport —, jetons du palier 3 consommés,
-   profils retrouvés par la recherche par nom, profils lus au
+   profils retrouvés par chaque filet — Google, recherche par nom,
+   filets société et homonymes, d'après leurs dernières lignes —, profils lus au
    cas par cas et fiches tranchées, incidents de session). Dans une session planifiée, personne ne lit
    le terminal : le rapport doit partir par **PushNotification** (titre
    court, ex. « Robot sourcing : N profils à examiner ») ET constituer

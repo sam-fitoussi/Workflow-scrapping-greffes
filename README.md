@@ -26,7 +26,9 @@ runbook qui a raison, et ce README qui est en retard.
 | `robot/run.py` | Orchestrateur : sondage, tirage, insertion, Journal |
 | `robot/reliquat.py` | Reconstruit le travail en attente depuis Airtable |
 | `robot/airtable.py` | Client REST Airtable (payloads sur disque) |
+| `robot/recherche_google.py` | Filet Google (Apify), juste après la recherche web du modèle |
 | `robot/recherche_nom.py` | Recherche LinkedIn par nom (Apify) des fiches que la recherche web n'a pas trouvées |
+| `robot/recherche_societe.py` | Filets société (Google, membres de la page LinkedIn) et homonymes départagés sur pièces |
 | `robot/scraping_lot.py`, `robot/apify.py` | Scraping des profils via Apify (sans compte LinkedIn), en tâche de fond |
 | `robot/verif_identite.py` | Contrôle anti-homonymes des profils scrapés |
 | `robot/scorer_lot.py` | Scoring déterministe + payloads de mise à jour |

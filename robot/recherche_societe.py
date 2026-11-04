@@ -159,6 +159,11 @@ def main(f_recherches: str, dossier: str, prefixe: str | None = None) -> None:
         print("Filets société : aucune fiche « Non trouvé ».")
         return
     deja = {json.loads(l)["rec_id"] for l in open(f_res) if l.strip()} if f_res.exists() else set()
+    # La vague 1 (reliquat) peut tourner en tâche de fond dans le même
+    # resultats.jsonl : ses fiches ne sont jamais versées une 2e fois ici.
+    f_v1 = d / "reliquat_scrape.jsonl"
+    if f_v1.exists():
+        deja |= {json.loads(l)["rec_id"] for l in open(f_v1) if l.strip()}
     a_scraper = sum(1 for e in payload if e["fields"].get(CF["linkedin_url"]) and e["id"] not in deja)
     budget = max(0, config.SCRAPE_DAILY_CAP - len(deja) - a_scraper)
     stats = {"A": 0, "B": 0, "C": 0}
